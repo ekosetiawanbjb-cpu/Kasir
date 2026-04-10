@@ -2,14 +2,11 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 - FINAL STABLE</title>
+<title>KIOS 88 - POS FINAL PRO</title>
 
-<!-- LIB -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- FIREBASE (NON MODULE - STABLE) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
@@ -22,10 +19,12 @@ input{padding:8px;margin:5px}
 .card{background:#fff;padding:12px;margin:10px 0;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .item{background:#fff;border:1px solid #ccc;padding:10px;border-radius:8px;cursor:pointer}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ddd;padding:6px}
 </style>
 </head>
 <body>
-<header>🔥 KIOS 88 - FINAL STABLE</header>
+<header>🔥 KIOS 88 - POS FINAL PRO</header>
 <div class="container">
 
 <div class="card">
@@ -36,141 +35,151 @@ input{padding:8px;margin:5px}
 <input id="modal" type="number" placeholder="Modal">
 <input id="jual" type="number" placeholder="Jual">
 <input id="stok" type="number" placeholder="Stok">
-<button id="btnTambah">Tambah</button>
+<button onclick="tambahProduk()">Tambah</button>
 </div>
 
 <div class="card">
 <h3>Import Excel</h3>
 <input type="file" id="fileInput">
-<button id="btnImport">Import</button>
-</div>
-
-<div class="card">
-<h3>Scan Barcode</h3>
-<div id="reader" style="width:300px"></div>
+<button onclick="importExcel()">Import</button>
 </div>
 
 <div class="card">
 <h3>Produk</h3>
-<input id="search" placeholder="Cari...">
+<input id="search" placeholder="Cari..." onkeyup="renderProduk()">
 <div id="produkGrid" class="grid"></div>
 </div>
 
 <div class="card">
 <h3>Keranjang</h3>
-<div id="keranjang"></div>
-<p>Total: Rp <span id="total">0</span></p>
+<table>
+<thead><tr><th>Nama</th><th>Qty</th><th>Total</th><th>Aksi</th></tr></thead>
+<tbody id="keranjang"></tbody>
+</table>
+<h3>Total: Rp <span id="total">0</span></h3>
+<input id="bayar" placeholder="Bayar" type="number">
+<button onclick="hitungKembalian()">Hitung</button>
+<p>Kembalian: Rp <span id="kembalian">0</span></p>
+<button onclick="cetakStruk()">Cetak Struk</button>
+<button onclick="selesai()">Selesai</button>
 </div>
 
 </div>
 
 <script>
-// FIREBASE INIT
 const firebaseConfig = {
   apiKey: "AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",
   authDomain: "kios-88.firebaseapp.com",
   projectId: "kios-88",
-  storageBucket: "kios-88.firebasestorage.app",
-  messagingSenderId: "902434248741",
-  appId: "1:902434248741:web:5417092bdd4450174d47cc"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let dataProduk=[];
+let docIds=[];
 let keranjangData=[];
 
-// REALTIME
-db.collection('produk').onSnapshot(snapshot=>{
-  dataProduk = snapshot.docs.map(d=>d.data());
-  renderProduk();
+db.collection('produk').onSnapshot(snap=>{
+ dataProduk=snap.docs.map(d=>d.data());
+ docIds=snap.docs.map(d=>d.id);
+ renderProduk();
 });
 
-// TAMBAH PRODUK
-document.getElementById('btnTambah').onclick = function(){
-  db.collection('produk').add({
-    nama:nama.value,
-    kategori:kategori.value,
-    barcode:barcode.value,
-    harga_modal:Number(modal.value),
-    harga_jual:Number(jual.value),
-    stok:Number(stok.value)
-  });
-};
-
-// IMPORT EXCEL
-document.getElementById('btnImport').onclick = function(){
-  const file=fileInput.files[0];
-  if(!file) return alert('Pilih file dulu');
-
-  const reader=new FileReader();
-  reader.onload=function(e){
-    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-    const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-    data.forEach(i=>{
-      db.collection('produk').add({
-        nama:i.nama,
-        kategori:i.kategori||"Lainnya",
-        barcode:i.barcode||"",
-        harga_modal:Number(i.harga_modal)||0,
-        harga_jual:Number(i.harga_jual)||0,
-        stok:Number(i.stok)||0
-      });
-    });
-
-    alert('Import berhasil');
-  };
-  reader.readAsArrayBuffer(file);
-};
-
-// RENDER PRODUK
-function renderProduk(){
-  const q=search.value?.toLowerCase()||'';
-  produkGrid.innerHTML='';
-
-  dataProduk
-  .filter(p=>p.nama.toLowerCase().includes(q))
-  .forEach(p=>{
-    const el=document.createElement('div');
-    el.className='item';
-    el.innerHTML=`<b>${p.nama}</b><br>Rp ${p.harga_jual}`;
-    el.onclick=function(){ addKeranjang(p); };
-    produkGrid.appendChild(el);
-  });
+function tambahProduk(){
+ db.collection('produk').add({
+  nama:nama.value,
+  kategori:kategori.value,
+  barcode:barcode.value,
+  harga_modal:+modal.value,
+  harga_jual:+jual.value,
+  stok:+stok.value
+ });
 }
 
-// KERANJANG
-function addKeranjang(p){
-  keranjangData.push(p);
-  renderKeranjang();
+function importExcel(){
+ const file=fileInput.files[0];
+ const reader=new FileReader();
+ reader.onload=e=>{
+  const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+  const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  data.forEach(i=>{
+   db.collection('produk').add(i);
+  });
+  alert('Import sukses');
+ };
+ reader.readAsArrayBuffer(file);
+}
+
+function renderProduk(){
+ const q=search.value?.toLowerCase()||'';
+ produkGrid.innerHTML='';
+ dataProduk.filter(p=>p.nama.toLowerCase().includes(q)).forEach((p,i)=>{
+  const el=document.createElement('div');
+  el.className='item';
+  el.innerHTML=`<b>${p.nama}</b><br>Rp ${p.harga_jual}<br>Stok:${p.stok}`;
+  el.onclick=()=>tambahKeranjang(i);
+  produkGrid.appendChild(el);
+ });
+}
+
+function tambahKeranjang(i){
+ const p=dataProduk[i];
+ if(p.stok<=0) return alert('Stok habis');
+ 
+ // kurangi stok firebase
+ db.collection('produk').doc(docIds[i]).update({stok:p.stok-1});
+
+ const existing=keranjangData.find(x=>x.nama===p.nama);
+ if(existing){
+  existing.qty++;
+  existing.total+=p.harga_jual;
+ }else{
+  keranjangData.push({nama:p.nama,harga:p.harga_jual,qty:1,total:p.harga_jual});
+ }
+ renderKeranjang();
 }
 
 function renderKeranjang(){
-  let totalHarga=0;
-  keranjang.innerHTML='';
-
-  keranjangData.forEach(i=>{
-    keranjang.innerHTML+=`<div>${i.nama} - Rp ${i.harga_jual}</div>`;
-    totalHarga+=i.harga_jual;
-  });
-
-  total.innerText=totalHarga;
+ let t=0;
+ keranjang.innerHTML='';
+ keranjangData.forEach((i,idx)=>{
+  keranjang.innerHTML+=`<tr>
+  <td>${i.nama}</td>
+  <td>${i.qty}</td>
+  <td>${i.total}</td>
+  <td><button onclick="hapusItem(${idx})">X</button></td>
+  </tr>`;
+  t+=i.total;
+ });
+ total.innerText=t;
 }
 
-// SEARCH
-search.onkeyup=renderProduk;
+function hapusItem(i){
+ keranjangData.splice(i,1);
+ renderKeranjang();
+}
 
-// BARCODE (DELAY BIAR STABIL)
-setTimeout(()=>{
-  const scanner=new Html5Qrcode("reader");
-  scanner.start({facingMode:"environment"},{fps:10},code=>{
-    const p=dataProduk.find(x=>x.barcode==code);
-    if(p) addKeranjang(p);
-  });
-},1000);
+function hitungKembalian(){
+ kembalian.innerText=bayar.value-total.innerText;
+}
 
+function cetakStruk(){
+ let s='KIOS 88\n=======\n';
+ keranjangData.forEach(i=>{
+  s+=`${i.nama} x${i.qty} = ${i.total}\n`;
+ });
+ s+='TOTAL:'+total.innerText+'\n';
+ s+='BAYAR:'+bayar.value+'\n';
+ s+='KEMBALI:'+kembalian.innerText;
+ const w=window.open('','','width=300');
+ w.document.write('<pre>'+s+'</pre>');
+ w.print();
+}
+
+function selesai(){
+ keranjangData=[];
+ renderKeranjang();
+}
 </script>
 
 </body>
