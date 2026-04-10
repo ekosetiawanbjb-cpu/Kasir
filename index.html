@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>KIOS 88 - POS CLEAN</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body{font-family:Arial;margin:0;background:#eef6ff}
+header{background:#007bff;color:#fff;padding:15px;font-size:20px}
+.container{padding:15px}
+button{padding:8px;margin:3px;background:#007bff;color:#fff;border:none;border-radius:6px;cursor:pointer}
+input{padding:8px;margin:5px}
+.card{background:#fff;padding:12px;margin:10px 0;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.item{background:#fff;border:1px solid #ccc;padding:10px;border-radius:8px;cursor:pointer}
+</style>
+</head>
+<body>
+<header>🔥 KIOS 88 - POS CLEAN</header>
+<div class="container">
+
+<div class="card">
+<h3>Tambah Produk</h3>
+<input id="nama" placeholder="Nama">
+<input id="kategori" placeholder="Kategori">
+<input id="barcode" placeholder="Barcode">
+<input id="modal" type="number" placeholder="Modal">
+<input id="jual" type="number" placeholder="Jual">
+<input id="stok" type="number" placeholder="Stok">
+<button id="btnTambah">Tambah</button>
+</div>
+
+<div class="card">
+<h3>Import Excel</h3>
+<input type="file" id="fileInput">
+<button id="btnImport">Import</button>
+</div>
+
+<div class="card">
+<h3>Scan Barcode</h3>
+<div id="reader" style="width:300px"></div>
+</div>
+
+<div class="card">
+<h3>Produk</h3>
+<input id="search" placeholder="Cari...">
+<div id="produkGrid" class="grid"></div>
+</div>
+
+<div class="card">
+<h3>Keranjang</h3>
+<div id="keranjang"></div>
+<p>Total: Rp <span id="total">0</span></p>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",
+  authDomain: "kios-88.firebaseapp.com",
+  projectId: "kios-88",
+  storageBucket: "kios-88.firebasestorage.app",
+  messagingSenderId: "902434248741",
+  appId: "1:902434248741:web:5417092bdd4450174d47cc"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let dataProduk=[];
+let keranjangData=[];
+
+// 🔄 Realtime
+onSnapshot(collection(db,'produk'),snap=>{
+ dataProduk=snap.docs.map(d=>d.data());
+ renderProduk();
+});
+
+// ➕ Tambah produk
+document.getElementById('btnTambah').onclick = async ()=>{
+ await addDoc(collection(db,'produk'),{
+  nama:nama.value,
+  kategori:kategori.value,
+  barcode:barcode.value,
+  harga_modal:+modal.value,
+  harga_jual:+jual.value,
+  stok:+stok.value
+ });
+};
+
+// 📥 Import Excel
+document.getElementById('btnImport').onclick = ()=>{
+ const file=fileInput.files[0];
+ if(!file) return alert('Pilih file dulu');
+
+ const reader=new FileReader();
+ reader.onload=async e=>{
+  const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+  const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+  for(const i of data){
+   await addDoc(collection(db,'produk'),i);
+  }
+
+  alert('Import sukses');
+ };
+ reader.readAsArrayBuffer(file);
+};
+
+// 🧾 Render produk
+function renderProduk(){
+ const q=search.value?.toLowerCase()||'';
+ produkGrid.innerHTML='';
+ dataProduk.filter(p=>p.nama.toLowerCase().includes(q)).forEach((p,i)=>{
+  const el=document.createElement('div');
+  el.className='item';
+  el.innerHTML=`<b>${p.nama}</b><br>Rp ${p.harga_jual}`;
+  el.onclick=()=>addKeranjang(p);
+  produkGrid.appendChild(el);
+ });
+}
+
+// 🛒 Tambah keranjang
+function addKeranjang(p){
+ keranjangData.push(p);
+ renderKeranjang();
+}
+
+function renderKeranjang(){
+ let t=0;
+ keranjang.innerHTML='';
+ keranjangData.forEach(i=>{
+  keranjang.innerHTML+=
