@@ -2,11 +2,16 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 - POS CLEAN</title>
+<title>KIOS 88 - FINAL STABLE</title>
 
+<!-- LIB -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- FIREBASE (NON MODULE - STABLE) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
 body{font-family:Arial;margin:0;background:#eef6ff}
@@ -20,7 +25,7 @@ input{padding:8px;margin:5px}
 </style>
 </head>
 <body>
-<header>🔥 KIOS 88 - POS CLEAN</header>
+<header>🔥 KIOS 88 - FINAL STABLE</header>
 <div class="container">
 
 <div class="card">
@@ -59,10 +64,8 @@ input{padding:8px;margin:5px}
 
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
-
+<script>
+// FIREBASE INIT
 const firebaseConfig = {
   apiKey: "AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",
   authDomain: "kios-88.firebaseapp.com",
@@ -72,70 +75,103 @@ const firebaseConfig = {
   appId: "1:902434248741:web:5417092bdd4450174d47cc"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 let dataProduk=[];
 let keranjangData=[];
 
-// 🔄 Realtime
-onSnapshot(collection(db,'produk'),snap=>{
- dataProduk=snap.docs.map(d=>d.data());
- renderProduk();
+// REALTIME
+db.collection('produk').onSnapshot(snapshot=>{
+  dataProduk = snapshot.docs.map(d=>d.data());
+  renderProduk();
 });
 
-// ➕ Tambah produk
-document.getElementById('btnTambah').onclick = async ()=>{
- await addDoc(collection(db,'produk'),{
-  nama:nama.value,
-  kategori:kategori.value,
-  barcode:barcode.value,
-  harga_modal:+modal.value,
-  harga_jual:+jual.value,
-  stok:+stok.value
- });
+// TAMBAH PRODUK
+document.getElementById('btnTambah').onclick = function(){
+  db.collection('produk').add({
+    nama:nama.value,
+    kategori:kategori.value,
+    barcode:barcode.value,
+    harga_modal:Number(modal.value),
+    harga_jual:Number(jual.value),
+    stok:Number(stok.value)
+  });
 };
 
-// 📥 Import Excel
-document.getElementById('btnImport').onclick = ()=>{
- const file=fileInput.files[0];
- if(!file) return alert('Pilih file dulu');
+// IMPORT EXCEL
+document.getElementById('btnImport').onclick = function(){
+  const file=fileInput.files[0];
+  if(!file) return alert('Pilih file dulu');
 
- const reader=new FileReader();
- reader.onload=async e=>{
-  const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
-  const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-  for(const i of data){
-   await addDoc(collection(db,'produk'),i);
-  }
+    data.forEach(i=>{
+      db.collection('produk').add({
+        nama:i.nama,
+        kategori:i.kategori||"Lainnya",
+        barcode:i.barcode||"",
+        harga_modal:Number(i.harga_modal)||0,
+        harga_jual:Number(i.harga_jual)||0,
+        stok:Number(i.stok)||0
+      });
+    });
 
-  alert('Import sukses');
- };
- reader.readAsArrayBuffer(file);
+    alert('Import berhasil');
+  };
+  reader.readAsArrayBuffer(file);
 };
 
-// 🧾 Render produk
+// RENDER PRODUK
 function renderProduk(){
- const q=search.value?.toLowerCase()||'';
- produkGrid.innerHTML='';
- dataProduk.filter(p=>p.nama.toLowerCase().includes(q)).forEach((p,i)=>{
-  const el=document.createElement('div');
-  el.className='item';
-  el.innerHTML=`<b>${p.nama}</b><br>Rp ${p.harga_jual}`;
-  el.onclick=()=>addKeranjang(p);
-  produkGrid.appendChild(el);
- });
+  const q=search.value?.toLowerCase()||'';
+  produkGrid.innerHTML='';
+
+  dataProduk
+  .filter(p=>p.nama.toLowerCase().includes(q))
+  .forEach(p=>{
+    const el=document.createElement('div');
+    el.className='item';
+    el.innerHTML=`<b>${p.nama}</b><br>Rp ${p.harga_jual}`;
+    el.onclick=function(){ addKeranjang(p); };
+    produkGrid.appendChild(el);
+  });
 }
 
-// 🛒 Tambah keranjang
+// KERANJANG
 function addKeranjang(p){
- keranjangData.push(p);
- renderKeranjang();
+  keranjangData.push(p);
+  renderKeranjang();
 }
 
 function renderKeranjang(){
- let t=0;
- keranjang.innerHTML='';
- keranjangData.forEach(i=>{
-  keranjang.innerHTML+=
+  let totalHarga=0;
+  keranjang.innerHTML='';
+
+  keranjangData.forEach(i=>{
+    keranjang.innerHTML+=`<div>${i.nama} - Rp ${i.harga_jual}</div>`;
+    totalHarga+=i.harga_jual;
+  });
+
+  total.innerText=totalHarga;
+}
+
+// SEARCH
+search.onkeyup=renderProduk;
+
+// BARCODE (DELAY BIAR STABIL)
+setTimeout(()=>{
+  const scanner=new Html5Qrcode("reader");
+  scanner.start({facingMode:"environment"},{fps:10},code=>{
+    const p=dataProduk.find(x=>x.barcode==code);
+    if(p) addKeranjang(p);
+  });
+},1000);
+
+</script>
+
+</body>
+</html>
