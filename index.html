@@ -2,32 +2,107 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 FINAL PRO FIX</title>
+<title>KIOS 88 POS PRO</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
 body{font-family:Arial;margin:0;background:#eef6ff}
-header{background:#007bff;color:#fff;padding:15px}
+header{background:#1976d2;color:#fff;padding:15px;font-size:18px;font-weight:bold}
 .container{padding:15px}
-button{padding:8px;margin:4px;border:none;border-radius:8px;cursor:pointer}
-input{padding:6px;margin:4px}
-.card{background:#fff;padding:12px;margin:10px 0;border-radius:10px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
-.item{border:1px solid #ccc;padding:10px;border-radius:8px;cursor:pointer;position:relative}
-.delete-btn{position:absolute;bottom:5px;right:5px;background:red;color:#fff}
-.edit-btn{position:absolute;bottom:5px;left:5px;background:orange;color:#fff}
-.active{background:#007bff;color:#fff}
-.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center}
-.modal-box{background:#fff;padding:20px;border-radius:10px}
+
+/* CARD */
+.card{
+  background:#fff;
+  padding:15px;
+  margin-bottom:15px;
+  border-radius:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* INPUT */
+input{
+  padding:8px;
+  margin:5px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+/* BUTTON */
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.btn-primary{background:#1976d2;color:#fff}
+.btn-danger{background:red;color:#fff}
+.btn-warning{background:orange;color:#fff}
+
+/* GRID PRODUK */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:12px;
+}
+
+/* ITEM PRODUK */
+.item{
+  border:1px solid #ddd;
+  border-radius:10px;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  background:#fafafa;
+  transition:0.2s;
+}
+
+.item:hover{
+  transform:scale(1.03);
+  background:#fff;
+}
+
+/* KATEGORI */
+#kategoriFilter{
+  margin:10px 0;
+}
+
+#kategoriFilter button{
+  background:#ddd;
+}
+
+#kategoriFilter .active{
+  background:#1976d2;
+  color:#fff;
+}
+
+/* MODAL */
+.modal{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,0.5);
+  display:none;
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-box{
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+}
 </style>
 </head>
 
 <body>
-<header>🔥 KIOS 88 FINAL PRO FIX</header>
+
+<header>🔥 KIOS 88 POS PRO</header>
 
 <div class="container">
 
@@ -38,16 +113,12 @@ input{padding:6px;margin:4px}
 <input id="modal" type="number" placeholder="Modal">
 <input id="jual" type="number" placeholder="Jual">
 <input id="stok" type="number" placeholder="Stok">
-<button onclick="tambahProduk()">Tambah</button>
+<button class="btn-primary" onclick="tambahProduk()">Tambah</button>
 </div>
 
 <div class="card">
 <input type="file" id="fileInput">
-<button onclick="importExcel()">Import</button>
-</div>
-
-<div class="card">
-<div id="reader" style="width:250px"></div>
+<button class="btn-primary" onclick="importExcel()">Import</button>
 </div>
 
 <div class="card">
@@ -60,24 +131,25 @@ input{padding:6px;margin:4px}
 <div id="keranjang"></div>
 <p>Total: Rp <span id="total">0</span></p>
 <input id="bayar" type="number" placeholder="Bayar">
-<button onclick="hitungKembalian()">Hitung</button>
+<button class="btn-primary" onclick="hitungKembalian()">Hitung</button>
 <p>Kembalian: Rp <span id="kembalian">0</span></p>
-<button onclick="cetakStruk()">Cetak Struk</button>
-<button onclick="selesai()">Selesai</button>
+<button class="btn-warning" onclick="cetakStruk()">Cetak Struk</button>
+<button class="btn-primary" onclick="selesai()">Selesai</button>
 </div>
 
 </div>
 
 <!-- MODAL -->
 <div id="modalEdit" class="modal">
- <div class="modal-box">
-  <h3>Edit Produk</h3>
-  <input id="editNama">
-  <input id="editHarga" type="number">
-  <input id="editStok" type="number">
-  <button onclick="simpanEdit()">Simpan</button>
-  <button onclick="modalEdit.style.display='none'">Batal</button>
- </div>
+<div class="modal-box">
+<h3>Edit Produk</h3>
+<input id="editNama">
+<input id="editHarga" type="number">
+<input id="editStok" type="number">
+<br><br>
+<button class="btn-primary" onclick="simpanEdit()">Simpan</button>
+<button onclick="modalEdit.style.display='none'">Batal</button>
+</div>
 </div>
 
 <script>
@@ -93,7 +165,7 @@ const db=firebase.firestore();
 let dataProduk=[], keranjangData=[], kategoriAktif=null, editId=null;
 
 db.collection('produk').onSnapshot(snap=>{
- dataProduk = snap.docs.map(d=>({id:d.id,...d.data()}));
+ dataProduk=snap.docs.map(d=>({id:d.id,...d.data()}));
  renderKategori();
  renderProduk();
 });
@@ -135,7 +207,7 @@ function renderKategori(){
  kategoriFilter.innerHTML='';
  list.forEach(k=>{
   const btn=document.createElement('button');
-  btn.textContent=k;
+  btn.textContent=k.toUpperCase(); // FIX 2
   if(kategoriAktif===k) btn.classList.add('active');
   btn.onclick=()=>{
     kategoriAktif=(kategoriAktif===k)?null:k;
@@ -149,6 +221,7 @@ function renderKategori(){
 function renderProduk(){
  produkGrid.innerHTML='';
  if(!kategoriAktif) return;
+
  const q=search.value.toLowerCase();
 
  dataProduk
@@ -157,22 +230,36 @@ function renderProduk(){
  .forEach(p=>{
   const el=document.createElement('div');
   el.className='item';
-  el.innerHTML=`${p.nama}<br>Rp ${p.harga_jual}<br>Stok:${p.stok}`;
+
+  el.innerHTML=`
+    <div>
+      <b>${p.nama}</b><br>
+      Rp ${p.harga_jual}<br>
+      Stok: ${p.stok}
+    </div>
+  `;
 
   el.onclick=()=>addKeranjang(p);
 
-  const del=document.createElement('button');
-  del.textContent='Hapus';
-  del.className='delete-btn';
-  del.onclick=(e)=>{e.stopPropagation();hapusProduk(p.id)};
+  const action=document.createElement('div');
+  action.style.display='flex';
+  action.style.justifyContent='space-between';
 
   const edit=document.createElement('button');
   edit.textContent='Edit';
-  edit.className='edit-btn';
-  edit.onclick=(e)=>{e.stopPropagation();bukaEdit(p)};
+  edit.className='btn-warning';
 
-  el.appendChild(del);
-  el.appendChild(edit);
+  const del=document.createElement('button');
+  del.textContent='Hapus';
+  del.className='btn-danger';
+
+  edit.onclick=(e)=>{e.stopPropagation();bukaEdit(p)};
+  del.onclick=(e)=>{e.stopPropagation();hapusProduk(p.id)};
+
+  action.appendChild(edit);
+  action.appendChild(del);
+  el.appendChild(action);
+
   produkGrid.appendChild(el);
  });
 }
@@ -208,7 +295,8 @@ function addKeranjang(p){
 }
 
 function renderKeranjang(){
- let t=0; keranjang.innerHTML='';
+ let t=0;
+ keranjang.innerHTML='';
  keranjangData.forEach((i,idx)=>{
   keranjang.innerHTML+=`${i.nama} x${i.qty} = Rp ${i.total} <button onclick="hapusItem(${idx})">X</button><br>`;
   t+=i.total;
@@ -238,7 +326,7 @@ function cetakStruk(){
  s+='BAYAR: Rp '+(bayar.value||0)+'\n';
  s+='KEMBALI: Rp '+kembalian.textContent+'\n';
  s+='================\n';
- s+='Terima kasih telah berbelanja 🙏';
+ s+='Terima kasih telah berbelanja 🙏\nKIOS 88';
 
  const w=window.open('','','width=300');
  w.document.write('<pre>'+s+'</pre>');
@@ -266,5 +354,6 @@ function selesai(){
  alert("Transaksi selesai");
 }
 </script>
+
 </body>
 </html>
