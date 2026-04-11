@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 PRO STEP 1</title>
+<title>KIOS 88 PRO STEP 2</title>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -30,6 +30,7 @@ button{
 
 .btn-primary{background:#1976d2;color:#fff}
 .btn-danger{background:red;color:#fff}
+.btn-warning{background:orange;color:#fff}
 
 .grid{
  display:grid;
@@ -55,12 +56,28 @@ button{
  background:#1976d2;
  color:#fff;
 }
+
+.modal{
+ position:fixed;
+ top:0;left:0;
+ width:100%;height:100%;
+ background:rgba(0,0,0,0.5);
+ display:none;
+ justify-content:center;
+ align-items:center;
+}
+
+.modal-box{
+ background:#fff;
+ padding:20px;
+ border-radius:10px;
+}
 </style>
 </head>
 
 <body>
 
-<header>🔥 KIOS 88 PRO STEP 1</header>
+<header>🔥 KIOS 88 PRO STEP 2</header>
 
 <div class="container">
 
@@ -96,6 +113,19 @@ button{
 
 </div>
 
+<!-- MODAL EDIT -->
+<div id="modalEdit" class="modal">
+<div class="modal-box">
+<h3>Edit Produk</h3>
+<input id="editNama">
+<input id="editHarga" type="number">
+<input id="editStok" type="number">
+<br><br>
+<button class="btn-primary" onclick="simpanEdit()">Simpan</button>
+<button onclick="modalEdit.style.display='none'">Batal</button>
+</div>
+</div>
+
 <script>
 const firebaseConfig={
  apiKey:"AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",
@@ -106,7 +136,7 @@ const firebaseConfig={
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let dataProduk=[], keranjangData=[], kategoriAktif=null;
+let dataProduk=[], keranjangData=[], kategoriAktif=null, editId=null;
 
 function toggleForm(){
  formArea.style.display =
@@ -119,9 +149,19 @@ db.collection('produk').onSnapshot(snap=>{
  renderProduk();
 });
 
+function formatNama(nama){
+ return nama.replace(/\b\w/g,c=>c.toUpperCase());
+}
+
 function tambahProduk(){
+
+ if(jual.value < modal.value){
+  alert("Harga jual lebih kecil dari modal!");
+  return;
+ }
+
  db.collection('produk').add({
-  nama:nama.value,
+  nama:formatNama(nama.value),
   kategori:(kategori.value||'lainnya').toLowerCase(),
   barcode:barcode.value||'-',
   harga_modal:+modal.value,
@@ -140,6 +180,16 @@ function renderKategori(){
 
   if(kategoriAktif===k) btn.classList.add('active');
 
+  // tombol hapus kategori
+  const del=document.createElement('span');
+  del.textContent=' ❌';
+  del.onclick=(e)=>{
+    e.stopPropagation();
+    hapusKategori(k);
+  };
+
+  btn.appendChild(del);
+
   btn.onclick=()=>{
     kategoriAktif=(kategoriAktif===k)?null:k;
     renderKategori();
@@ -147,6 +197,16 @@ function renderKategori(){
   };
 
   kategoriFilter.appendChild(btn);
+ });
+}
+
+function hapusKategori(k){
+ if(!confirm("Hapus semua produk kategori ini?")) return;
+
+ dataProduk
+ .filter(p=>p.kategori===k)
+ .forEach(p=>{
+   db.collection('produk').doc(p.id).delete();
  });
 }
 
@@ -173,8 +233,51 @@ function renderProduk(){
 
   el.onclick=()=>addKeranjang(p);
 
+  const action=document.createElement('div');
+  action.style.display='flex';
+  action.style.justifyContent='space-between';
+
+  const edit=document.createElement('button');
+  edit.textContent='Edit';
+  edit.className='btn-warning';
+
+  const del=document.createElement('button');
+  del.textContent='Hapus';
+  del.className='btn-danger';
+
+  edit.onclick=(e)=>{e.stopPropagation();bukaEdit(p)};
+  del.onclick=(e)=>{e.stopPropagation();hapusProduk(p.id)};
+
+  action.appendChild(edit);
+  action.appendChild(del);
+
+  el.appendChild(action);
+
   produkGrid.appendChild(el);
  });
+}
+
+function hapusProduk(id){
+ if(confirm("Hapus produk?")){
+  db.collection('produk').doc(id).delete();
+ }
+}
+
+function bukaEdit(p){
+ editId=p.id;
+ editNama.value=p.nama;
+ editHarga.value=p.harga_jual;
+ editStok.value=p.stok;
+ modalEdit.style.display='flex';
+}
+
+function simpanEdit(){
+ db.collection('produk').doc(editId).update({
+  nama:editNama.value,
+  harga_jual:+editHarga.value,
+  stok:+editStok.value
+ });
+ modalEdit.style.display='none';
 }
 
 function addKeranjang(p){
