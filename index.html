@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 POS PRO</title>
+<title>KIOS 88 POS PRO MAX</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -10,113 +10,42 @@
 
 <style>
 body{font-family:Arial;margin:0;background:#eef6ff}
-header{background:#1976d2;color:#fff;padding:15px;font-size:18px;font-weight:bold}
+header{background:#1976d2;color:#fff;padding:15px;font-weight:bold}
 .container{padding:15px}
-
-/* CARD */
-.card{
-  background:#fff;
-  padding:15px;
-  margin-bottom:15px;
-  border-radius:12px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.1);
-}
-
-/* INPUT */
-input{
-  padding:8px;
-  margin:5px;
-  border-radius:8px;
-  border:1px solid #ccc;
-}
-
-/* BUTTON */
-button{
-  padding:8px 12px;
-  border:none;
-  border-radius:8px;
-  cursor:pointer;
-  font-weight:bold;
-}
-
+.card{background:#fff;padding:15px;margin-bottom:15px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
+input,select{padding:8px;margin:5px;border-radius:8px;border:1px solid #ccc}
+button{padding:8px 12px;margin:4px;border:none;border-radius:8px;cursor:pointer;font-weight:bold}
 .btn-primary{background:#1976d2;color:#fff}
 .btn-danger{background:red;color:#fff}
 .btn-warning{background:orange;color:#fff}
-
-/* GRID PRODUK */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
-  gap:12px;
-}
-
-/* ITEM PRODUK */
-.item{
-  border:1px solid #ddd;
-  border-radius:10px;
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  background:#fafafa;
-  transition:0.2s;
-}
-
-.item:hover{
-  transform:scale(1.03);
-  background:#fff;
-}
-
-/* KATEGORI */
-#kategoriFilter{
-  margin:10px 0;
-}
-
-#kategoriFilter button{
-  background:#ddd;
-}
-
-#kategoriFilter .active{
-  background:#1976d2;
-  color:#fff;
-}
-
-/* MODAL */
-.modal{
-  position:fixed;
-  top:0;left:0;
-  width:100%;height:100%;
-  background:rgba(0,0,0,0.5);
-  display:none;
-  justify-content:center;
-  align-items:center;
-}
-
-.modal-box{
-  background:#fff;
-  padding:20px;
-  border-radius:10px;
-}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.item{border:1px solid #ddd;border-radius:10px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;background:#fafafa}
+#kategoriFilter button{background:#ddd}
+#kategoriFilter .active{background:#1976d2;color:#fff}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center}
+.modal-box{background:#fff;padding:20px;border-radius:10px}
 </style>
 </head>
 
 <body>
-
-<header>🔥 KIOS 88 POS PRO</header>
+<header>🔥 KIOS 88 POS PRO MAX</header>
 
 <div class="container">
 
-<div class="card">
+<button class="btn-primary" onclick="toggleForm()">+ Kelola Produk</button>
+
+<div id="formArea" style="display:none" class="card">
 <input id="nama" placeholder="Nama">
 <input id="kategori" placeholder="Kategori">
+<select id="kategoriList"></select>
 <input id="barcode" placeholder="Barcode">
 <input id="modal" type="number" placeholder="Modal">
 <input id="jual" type="number" placeholder="Jual">
 <input id="stok" type="number" placeholder="Stok">
 <button class="btn-primary" onclick="tambahProduk()">Tambah</button>
-</div>
 
-<div class="card">
+<hr>
+
 <input type="file" id="fileInput">
 <button class="btn-primary" onclick="importExcel()">Import</button>
 </div>
@@ -133,7 +62,8 @@ button{
 <input id="bayar" type="number" placeholder="Bayar">
 <button class="btn-primary" onclick="hitungKembalian()">Hitung</button>
 <p>Kembalian: Rp <span id="kembalian">0</span></p>
-<button class="btn-warning" onclick="cetakStruk()">Cetak Struk</button>
+<button class="btn-warning" onclick="cetakStruk()">Cetak Web</button>
+<button class="btn-primary" onclick="cetakRawBT()">Print Bluetooth</button>
 <button class="btn-primary" onclick="selesai()">Selesai</button>
 </div>
 
@@ -158,11 +88,10 @@ const firebaseConfig={
  authDomain:"kios-88.firebaseapp.com",
  projectId:"kios-88"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let dataProduk=[], keranjangData=[], kategoriAktif=null, editId=null;
+let dataProduk=[],keranjangData=[],kategoriAktif=null,editId=null;
 
 db.collection('produk').onSnapshot(snap=>{
  dataProduk=snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -170,11 +99,24 @@ db.collection('produk').onSnapshot(snap=>{
  renderProduk();
 });
 
+function toggleForm(){
+ formArea.style.display = formArea.style.display==='none'?'block':'none';
+}
+
+function formatNama(nama){
+ return nama.replace(/\b\w/g,c=>c.toUpperCase());
+}
+
 function tambahProduk(){
+ if(jual.value < modal.value){
+  alert("Harga jual lebih kecil dari modal!");
+  return;
+ }
+
  db.collection('produk').add({
-  nama:nama.value,
+  nama:formatNama(nama.value),
   kategori:(kategori.value||'lainnya').toLowerCase(),
-  barcode:barcode.value,
+  barcode:barcode.value||'-',
   harga_modal:+modal.value,
   harga_jual:+jual.value,
   stok:+stok.value
@@ -183,7 +125,7 @@ function tambahProduk(){
 
 function importExcel(){
  const file=fileInput.files[0];
- if(!file) return alert("Pilih file");
+ if(!file)return alert("Pilih file");
  const reader=new FileReader();
  reader.onload=e=>{
   const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
@@ -192,7 +134,7 @@ function importExcel(){
    db.collection('produk').add({
     nama:i.nama,
     kategori:(i.kategori||'lainnya').toLowerCase(),
-    barcode:i.barcode||'',
+    barcode:i.barcode||'-',
     harga_modal:+i.harga_modal||0,
     harga_jual:+i.harga_jual||0,
     stok:+i.stok||0
@@ -205,22 +147,43 @@ function importExcel(){
 function renderKategori(){
  const list=[...new Set(dataProduk.map(p=>p.kategori))];
  kategoriFilter.innerHTML='';
+ kategoriList.innerHTML='<option value=\"\">--Pilih--</option>';
+
  list.forEach(k=>{
   const btn=document.createElement('button');
-  btn.textContent=k.toUpperCase(); // FIX 2
-  if(kategoriAktif===k) btn.classList.add('active');
+  btn.textContent=k.toUpperCase();
+
+  const del=document.createElement('span');
+  del.textContent=' ❌';
+  del.onclick=(e)=>{e.stopPropagation();hapusKategori(k)};
+  btn.appendChild(del);
+
   btn.onclick=()=>{
     kategoriAktif=(kategoriAktif===k)?null:k;
     renderKategori();
     renderProduk();
   };
+
   kategoriFilter.appendChild(btn);
+
+  const opt=document.createElement('option');
+  opt.value=k;
+  opt.textContent=k;
+  kategoriList.appendChild(opt);
  });
+
+ kategoriList.onchange=()=>{kategori.value=kategoriList.value};
+}
+
+function hapusKategori(k){
+ if(!confirm("Hapus kategori ini?"))return;
+ dataProduk.filter(p=>p.kategori===k)
+ .forEach(p=>db.collection('produk').doc(p.id).delete());
 }
 
 function renderProduk(){
  produkGrid.innerHTML='';
- if(!kategoriAktif) return;
+ if(!kategoriAktif)return;
 
  const q=search.value.toLowerCase();
 
@@ -231,13 +194,7 @@ function renderProduk(){
   const el=document.createElement('div');
   el.className='item';
 
-  el.innerHTML=`
-    <div>
-      <b>${p.nama}</b><br>
-      Rp ${p.harga_jual}<br>
-      Stok: ${p.stok}
-    </div>
-  `;
+  el.innerHTML=`<div><b>${p.nama}</b><br>Rp ${p.harga_jual}<br>Stok:${p.stok}</div>`;
 
   el.onclick=()=>addKeranjang(p);
 
@@ -298,7 +255,7 @@ function renderKeranjang(){
  let t=0;
  keranjang.innerHTML='';
  keranjangData.forEach((i,idx)=>{
-  keranjang.innerHTML+=`${i.nama} x${i.qty} = Rp ${i.total} <button onclick="hapusItem(${idx})">X</button><br>`;
+  keranjang.innerHTML+=`${i.nama} x${i.qty} = Rp ${i.total} <button onclick=\"hapusItem(${idx})\">X</button><br>`;
   t+=i.total;
  });
  total.textContent=t;
@@ -316,28 +273,36 @@ function hitungKembalian(){
  kembalian.textContent = kembali>=0 ? kembali : 0;
 }
 
-function cetakStruk(){
- let s='KIOS 88\n================\n';
+function generateStruk(){
+ let s='KIOS 88\\n================\\n';
  keranjangData.forEach(i=>{
-  s+=i.nama+' x'+i.qty+' = Rp '+i.total+'\n';
+  s+=i.nama+' x'+i.qty+' = Rp '+i.total+'\\n';
  });
- s+='----------------\n';
- s+='TOTAL: Rp '+total.textContent+'\n';
- s+='BAYAR: Rp '+(bayar.value||0)+'\n';
- s+='KEMBALI: Rp '+kembalian.textContent+'\n';
- s+='================\n';
- s+='Terima kasih telah berbelanja 🙏\nKIOS 88';
+ s+='----------------\\n';
+ s+='TOTAL: Rp '+total.textContent+'\\n';
+ s+='BAYAR: Rp '+(bayar.value||0)+'\\n';
+ s+='KEMBALI: Rp '+kembalian.textContent+'\\n';
+ s+='================\\n';
+ s+='Terima kasih 🙏\\';
+ return s;
+}
 
+function cetakStruk(){
  const w=window.open('','','width=300');
- w.document.write('<pre>'+s+'</pre>');
+ w.document.write('<pre>'+generateStruk()+'</pre>');
  w.print();
+}
+
+function cetakRawBT(){
+ const text = encodeURIComponent(generateStruk());
+ window.location.href = 'rawbt://print?text='+text;
 }
 
 function selesai(){
  for(const item of keranjangData){
   const p=dataProduk.find(x=>x.nama===item.nama);
   if(p.stok < item.qty){
-    alert("Stok tidak cukup");
+    alert(\"Stok tidak cukup\");
     return;
   }
  }
@@ -351,7 +316,7 @@ function selesai(){
 
  keranjangData=[];
  renderKeranjang();
- alert("Transaksi selesai");
+ alert(\"Transaksi selesai\");
 }
 </script>
 
