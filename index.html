@@ -240,14 +240,27 @@ function hapusKategori(k){
 
 function renderProduk(){
  produkGrid.innerHTML='';
- if(!kategoriAktif)return;
 
- const q=search.value.toLowerCase();
+ const q = search.value.toLowerCase();
 
- dataProduk
- .filter(p=>p.kategori===kategoriAktif)
- .filter(p=>p.nama.toLowerCase().includes(q) || p.barcode.includes(q))
- .forEach(p=>{
+ let filtered = dataProduk;
+
+ // 🔥 kalau ada isi search → override kategori
+ if(q){
+  filtered = dataProduk.filter(p =>
+    p.nama.toLowerCase().includes(q) ||
+    p.barcode.includes(q)
+  );
+ }else{
+  // kalau kosong → pakai kategori
+  if(!kategoriAktif) return;
+
+  filtered = dataProduk.filter(p =>
+    p.kategori === kategoriAktif
+  );
+ }
+
+ filtered.forEach(p=>{
   const el=document.createElement('div');
   el.className='item';
 
@@ -261,6 +274,7 @@ function renderProduk(){
 
   el.onclick=()=>addKeranjang(p);
 
+  // tombol edit & hapus tetap
   const action=document.createElement('div');
   action.style.display='flex';
   action.style.justifyContent='space-between';
@@ -278,6 +292,7 @@ function renderProduk(){
 
   action.appendChild(edit);
   action.appendChild(del);
+
   el.appendChild(action);
 
   produkGrid.appendChild(el);
@@ -363,7 +378,7 @@ function generateStruk(){
   s+=i.nama+' x'+i.qty+' = '+i.total+'\n';
  });
  s+='TOTAL: '+total.textContent+'\n';
- s+='Terima kasih 🙏\nKIOS 88';
+ s+='Terima kasih 🙏\n';
  return s;
 }
 
