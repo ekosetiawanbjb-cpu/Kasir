@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 - FINAL PRO FIX</title>
+<title>KIOS 88 FINAL PRO FIX</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
@@ -13,7 +13,7 @@
 body{font-family:Arial;margin:0;background:#eef6ff}
 header{background:#007bff;color:#fff;padding:15px}
 .container{padding:15px}
-button{padding:8px 10px;margin:4px;border:none;border-radius:8px;cursor:pointer}
+button{padding:8px;margin:4px;border:none;border-radius:8px;cursor:pointer}
 input{padding:6px;margin:4px}
 .card{background:#fff;padding:12px;margin:10px 0;border-radius:10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
@@ -25,6 +25,7 @@ input{padding:6px;margin:4px}
 .modal-box{background:#fff;padding:20px;border-radius:10px}
 </style>
 </head>
+
 <body>
 <header>🔥 KIOS 88 FINAL PRO FIX</header>
 
@@ -37,12 +38,12 @@ input{padding:6px;margin:4px}
 <input id="modal" type="number" placeholder="Modal">
 <input id="jual" type="number" placeholder="Jual">
 <input id="stok" type="number" placeholder="Stok">
-<button id="btnTambah">Tambah</button>
+<button onclick="tambahProduk()">Tambah</button>
 </div>
 
 <div class="card">
 <input type="file" id="fileInput">
-<button id="btnImport">Import</button>
+<button onclick="importExcel()">Import</button>
 </div>
 
 <div class="card">
@@ -50,7 +51,7 @@ input{padding:6px;margin:4px}
 </div>
 
 <div class="card">
-<input id="search" placeholder="Cari...">
+<input id="search" placeholder="Cari..." onkeyup="renderProduk()">
 <div id="kategoriFilter"></div>
 <div id="produkGrid" class="grid"></div>
 </div>
@@ -59,44 +60,40 @@ input{padding:6px;margin:4px}
 <div id="keranjang"></div>
 <p>Total: Rp <span id="total">0</span></p>
 <input id="bayar" type="number" placeholder="Bayar">
-<button id="btnHitung">Hitung</button>
+<button onclick="hitungKembalian()">Hitung</button>
 <p>Kembalian: Rp <span id="kembalian">0</span></p>
-<button id="btnStruk">Cetak Struk</button>
-<button id="btnSelesai">Selesai</button>
+<button onclick="cetakStruk()">Cetak Struk</button>
+<button onclick="selesai()">Selesai</button>
 </div>
 
 </div>
 
-<!-- MODAL EDIT -->
+<!-- MODAL -->
 <div id="modalEdit" class="modal">
  <div class="modal-box">
   <h3>Edit Produk</h3>
   <input id="editNama">
   <input id="editHarga" type="number">
   <input id="editStok" type="number">
-  <button id="btnSaveEdit">Simpan</button>
+  <button onclick="simpanEdit()">Simpan</button>
   <button onclick="modalEdit.style.display='none'">Batal</button>
  </div>
 </div>
 
 <script>
-const firebaseConfig={apiKey:"AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",authDomain:"kios-88.firebaseapp.com",projectId:"kios-88"};
+const firebaseConfig={
+ apiKey:"AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",
+ authDomain:"kios-88.firebaseapp.com",
+ projectId:"kios-88"
+};
+
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let dataProduk=[],keranjangData=[],kategoriAktif=null,editId=null;
+let dataProduk=[], keranjangData=[], kategoriAktif=null, editId=null;
 
-btnTambah.onclick=tambahProduk;
-btnImport.onclick=importExcel;
-search.onkeyup=renderProduk;
-btnHitung.onclick=hitungKembalian;
-btnStruk.onclick=cetakStruk;
-btnSelesai.onclick=selesai;
-btnSaveEdit.onclick=simpanEdit;
-
-// REALTIME FIX (ID NEMPEL)
 db.collection('produk').onSnapshot(snap=>{
- dataProduk=snap.docs.map(d=>({id:d.id,...d.data()}));
+ dataProduk = snap.docs.map(d=>({id:d.id,...d.data()}));
  renderKategori();
  renderProduk();
 });
@@ -114,7 +111,7 @@ function tambahProduk(){
 
 function importExcel(){
  const file=fileInput.files[0];
- if(!file)return alert('Pilih file');
+ if(!file) return alert("Pilih file");
  const reader=new FileReader();
  reader.onload=e=>{
   const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
@@ -129,7 +126,6 @@ function importExcel(){
     stok:+i.stok||0
    });
   });
-  alert('Import sukses');
  };
  reader.readAsArrayBuffer(file);
 }
@@ -140,7 +136,7 @@ function renderKategori(){
  list.forEach(k=>{
   const btn=document.createElement('button');
   btn.textContent=k;
-  if(kategoriAktif===k)btn.classList.add('active');
+  if(kategoriAktif===k) btn.classList.add('active');
   btn.onclick=()=>{
     kategoriAktif=(kategoriAktif===k)?null:k;
     renderKategori();
@@ -152,8 +148,9 @@ function renderKategori(){
 
 function renderProduk(){
  produkGrid.innerHTML='';
- if(!kategoriAktif)return;
+ if(!kategoriAktif) return;
  const q=search.value.toLowerCase();
+
  dataProduk
  .filter(p=>p.kategori===kategoriAktif)
  .filter(p=>p.nama.toLowerCase().includes(q))
@@ -161,6 +158,7 @@ function renderProduk(){
   const el=document.createElement('div');
   el.className='item';
   el.innerHTML=`${p.nama}<br>Rp ${p.harga_jual}<br>Stok:${p.stok}`;
+
   el.onclick=()=>addKeranjang(p);
 
   const del=document.createElement('button');
@@ -180,7 +178,7 @@ function renderProduk(){
 }
 
 function hapusProduk(id){
- if(confirm('Hapus produk?')){
+ if(confirm("Hapus produk?")){
   db.collection('produk').doc(id).delete();
  }
 }
@@ -210,69 +208,63 @@ function addKeranjang(p){
 }
 
 function renderKeranjang(){
- let t=0;keranjang.innerHTML='';
+ let t=0; keranjang.innerHTML='';
  keranjangData.forEach((i,idx)=>{
-  const div=document.createElement('div');
-  div.innerHTML=`${i.nama} x${i.qty} = Rp ${i.total}`;
-  const btn=document.createElement('button');
-  btn.textContent='X';
-  btn.onclick=()=>{keranjangData.splice(idx,1);renderKeranjang()};
-  div.appendChild(btn);
-  keranjang.appendChild(div);
+  keranjang.innerHTML+=`${i.nama} x${i.qty} = Rp ${i.total} <button onclick="hapusItem(${idx})">X</button><br>`;
   t+=i.total;
  });
  total.textContent=t;
 }
- 
-function hitungKembalian(){
-  const totalBelanja = Number(total.textContent || 0);
-  const uangBayar = Number(bayar.value || 0);
 
-  const kembali = uangBayar - totalBelanja;
-
-  kembalian.textContent = kembali >= 0 ? kembali : 0;
+function hapusItem(i){
+ keranjangData.splice(i,1);
+ renderKeranjang();
 }
+
+function hitungKembalian(){
+ const totalBelanja=Number(total.textContent||0);
+ const uang=Number(bayar.value||0);
+ const kembali=uang-totalBelanja;
+ kembalian.textContent = kembali>=0 ? kembali : 0;
+}
+
 function cetakStruk(){
- let s = 'KIOS 88\n================\n';
-
- keranjangData.forEach(function(i){
-  s += i.nama + ' x' + i.qty + ' = Rp ' + i.total + '\n';
+ let s='KIOS 88\n================\n';
+ keranjangData.forEach(i=>{
+  s+=i.nama+' x'+i.qty+' = Rp '+i.total+'\n';
  });
+ s+='----------------\n';
+ s+='TOTAL: Rp '+total.textContent+'\n';
+ s+='BAYAR: Rp '+(bayar.value||0)+'\n';
+ s+='KEMBALI: Rp '+kembalian.textContent+'\n';
+ s+='================\n';
+ s+='Terima kasih telah berbelanja 🙏\nKIOS 88';
 
- s += '----------------\n';
- s += 'TOTAL: Rp ' + total.textContent + '\n';
- s += 'BAYAR: Rp ' + (bayar.value || 0) + '\n';
- s += 'KEMBALI: Rp ' + kembalian.textContent + '\n';
- s += '================\n';
- s += 'Terima kasih telah berbelanja 🙏\n';
- s += 'KIOS 88';
-
- const w = window.open('', '', 'width=300');
- w.document.write('<pre>' + s + '</pre>');
+ const w=window.open('','','width=300');
+ w.document.write('<pre>'+s+'</pre>');
  w.print();
 }
 
 function selesai(){
  for(const item of keranjangData){
   const p=dataProduk.find(x=>x.nama===item.nama);
-  if(p.stok < item.qty){alert('Stok tidak cukup');return;}
+  if(p.stok < item.qty){
+    alert("Stok tidak cukup");
+    return;
+  }
  }
+
  keranjangData.forEach(item=>{
   const p=dataProduk.find(x=>x.nama===item.nama);
-  db.collection('produk').doc(p.id).update({stok:p.stok-item.qty});
+  db.collection('produk').doc(p.id).update({
+    stok:p.stok-item.qty
+  });
  });
- keranjangData=[];renderKeranjang();alert('Selesai');
+
+ keranjangData=[];
+ renderKeranjang();
+ alert("Transaksi selesai");
 }
-
-// barcode
-setTimeout(()=>{
- const scanner=new Html5Qrcode("reader");
- scanner.start({facingMode:"environment"},{fps:10},code=>{
-  const p=dataProduk.find(x=>x.barcode==code);
-  if(p)addKeranjang(p);
- }).catch(()=>{});
-},1000);
-
 </script>
 </body>
 </html>
