@@ -2,29 +2,27 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 - POS FINAL PRO+</title>
+<title>KIOS 88 - POS FULL CLEAN</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+<script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
 body{font-family:Arial;margin:0;background:#eef6ff}
-header{background:#007bff;color:#fff;padding:15px;font-size:20px}
+header{background:#007bff;color:#fff;padding:15px}
 .container{padding:15px}
-button{padding:10px 14px;margin:4px;border:none;border-radius:8px;cursor:pointer}
+button{padding:10px;margin:4px;border-radius:8px;border:none;cursor:pointer}
 input{padding:8px;margin:5px}
-.card{background:#fff;padding:12px;margin:10px 0;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,0.1)}
+.card{background:#fff;padding:12px;margin:10px 0;border-radius:10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
-.item{background:#fff;border:1px solid #ccc;padding:10px;border-radius:10px;cursor:pointer}
-.kategori-btn{background:#e3f0ff;color:#007bff}
-.kategori-btn.active{background:#007bff;color:#fff}
+.item{border:1px solid #ccc;padding:10px;border-radius:8px;cursor:pointer}
+.active{background:#007bff;color:#fff}
 </style>
 </head>
-
 <body>
-<header>🔥 KIOS 88 - POS PRO+</header>
+<header>🔥 KIOS 88 - FULL CLEAN</header>
 
 <div class="container">
 
@@ -36,12 +34,23 @@ input{padding:8px;margin:5px}
 <input id="modal" type="number" placeholder="Modal">
 <input id="jual" type="number" placeholder="Jual">
 <input id="stok" type="number" placeholder="Stok">
-<button onclick="tambahProduk()">Tambah</button>
+<button id="btnTambah">Tambah</button>
+</div>
+
+<div class="card">
+<h3>Import Excel</h3>
+<input type="file" id="fileInput">
+<button id="btnImport">Import</button>
+</div>
+
+<div class="card">
+<h3>Scan Barcode</h3>
+<div id="reader" style="width:250px"></div>
 </div>
 
 <div class="card">
 <h3>Produk</h3>
-<input id="search" placeholder="Cari..." onkeyup="renderProduk()">
+<input id="search" placeholder="Cari...">
 <div id="kategoriFilter"></div>
 <div id="produkGrid" class="grid"></div>
 </div>
@@ -50,31 +59,31 @@ input{padding:8px;margin:5px}
 <h3>Keranjang</h3>
 <div id="keranjang"></div>
 <p>Total: Rp <span id="total">0</span></p>
-<input id="bayar" placeholder="Bayar" type="number">
-<button onclick="hitungKembalian()">Hitung</button>
+<input id="bayar" type="number" placeholder="Bayar">
+<button id="btnHitung">Hitung</button>
 <p>Kembalian: Rp <span id="kembalian">0</span></p>
-<button onclick="cetakStruk()">Cetak Struk</button>
-<button onclick="selesai()">Selesai</button>
+<button id="btnStruk">Cetak Struk</button>
+<button id="btnSelesai">Selesai</button>
 </div>
 
 </div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",
-  authDomain: "kios-88.firebaseapp.com",
-  projectId: "kios-88",
-};
-
+const firebaseConfig={apiKey:"AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",authDomain:"kios-88.firebaseapp.com",projectId:"kios-88"};
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db=firebase.firestore();
 
-let dataProduk=[];
-let docIds=[];
-let keranjangData=[];
-let kategoriAktif=null;
+let dataProduk=[],docIds=[],keranjangData=[],kategoriAktif=null;
 
-// realtime
+// EVENTS
+btnTambah.addEventListener("click",tambahProduk);
+btnImport.addEventListener("click",importExcel);
+search.addEventListener("keyup",renderProduk);
+btnHitung.addEventListener("click",hitungKembalian);
+btnStruk.addEventListener("click",cetakStruk);
+btnSelesai.addEventListener("click",selesai);
+
+// FIRESTORE
 db.collection('produk').onSnapshot(snap=>{
  dataProduk=snap.docs.map(d=>d.data());
  docIds=snap.docs.map(d=>d.id);
@@ -93,141 +102,121 @@ function tambahProduk(){
  });
 }
 
-// kategori auto + toggle
+function importExcel(){
+ const file=fileInput.files[0];
+ if(!file) return alert('Pilih file dulu');
+ const reader=new FileReader();
+ reader.onload=e=>{
+  const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+  const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  data.forEach(i=>{
+   db.collection('produk').add({
+    nama:i.nama,
+    kategori:(i.kategori||'lainnya').toLowerCase(),
+    barcode:i.barcode||'',
+    harga_modal:Number(i.harga_modal)||0,
+    harga_jual:Number(i.harga_jual)||0,
+    stok:Number(i.stok)||0
+   });
+  });
+  alert('Import sukses');
+ };
+ reader.readAsArrayBuffer(file);
+}
+
 function renderKategori(){
  const list=[...new Set(dataProduk.map(p=>p.kategori||'lainnya'))];
  kategoriFilter.innerHTML='';
-
  list.forEach(k=>{
   const btn=document.createElement('button');
-  btn.innerText=k.toUpperCase();
-  btn.className='kategori-btn'+(kategoriAktif===k?' active':'');
-
-  btn.onclick=()=>{
-    if(kategoriAktif===k){
-      kategoriAktif=null; // reset
-    }else{
-      kategoriAktif=k;
-    }
+  btn.textContent=k.toUpperCase();
+  if(kategoriAktif===k) btn.classList.add("active");
+  btn.addEventListener("click",()=>{
+    kategoriAktif=(kategoriAktif===k)?null:k;
     renderKategori();
     renderProduk();
-  };
-
-  // tombol hapus kategori
-  btn.oncontextmenu=(e)=>{
-    e.preventDefault();
-    if(confirm('Hapus semua produk kategori '+k+'?')){
-      dataProduk.forEach((p,i)=>{
-        if(p.kategori===k){
-          db.collection('produk').doc(docIds[i]).delete();
-        }
-      });
-    }
-  };
-
+  });
   kategoriFilter.appendChild(btn);
  });
 }
 
-// produk
 function renderProduk(){
- const q=search.value?.toLowerCase()||'';
  produkGrid.innerHTML='';
-
  if(!kategoriAktif) return;
-
+ const q=search.value.toLowerCase();
  dataProduk
  .filter(p=>p.kategori===kategoriAktif)
  .filter(p=>p.nama.toLowerCase().includes(q))
  .forEach((p,i)=>{
   const el=document.createElement('div');
   el.className='item';
-  el.innerHTML=`<b>${p.nama}</b><br>Rp ${p.harga_jual}<br>Stok:${p.stok}
-  <br><button onclick="hapusProduk(${i});event.stopPropagation()">Hapus</button>`;
-  el.onclick=()=>addKeranjang(p);
+  el.innerHTML=`${p.nama}<br>Rp ${p.harga_jual}<br>Stok:${p.stok}`;
+  el.addEventListener("click",()=>addKeranjang(p));
   produkGrid.appendChild(el);
  });
 }
 
-function hapusProduk(i){
- if(confirm('Hapus produk?')){
-  db.collection('produk').doc(docIds[i]).delete();
- }
-}
-
-// keranjang
 function addKeranjang(p){
  const ex=keranjangData.find(x=>x.nama===p.nama);
- if(ex){ ex.qty++; ex.total+=p.harga_jual }
+ if(ex){ex.qty++;ex.total+=p.harga_jual}
  else keranjangData.push({nama:p.nama,harga:p.harga_jual,qty:1,total:p.harga_jual});
  renderKeranjang();
 }
 
 function renderKeranjang(){
- let t=0;
- keranjang.innerHTML='';
+ let t=0;keranjang.innerHTML='';
  keranjangData.forEach((i,idx)=>{
-  keranjang.innerHTML+=`<div>${i.nama} x${i.qty} = ${i.total}
-  <button onclick="hapusItem(${idx})">X</button></div>`;
+  const div=document.createElement('div');
+  div.innerHTML=`${i.nama} x${i.qty} = Rp ${i.total}`;
+  const btn=document.createElement('button');
+  btn.textContent='X';
+  btn.addEventListener("click",()=>hapusItem(idx));
+  div.appendChild(btn);
+  keranjang.appendChild(div);
   t+=i.total;
  });
- total.innerText=t;
+ total.textContent=t;
 }
 
-function hapusItem(i){
- keranjangData.splice(i,1);
- renderKeranjang();
-}
+function hapusItem(i){keranjangData.splice(i,1);renderKeranjang();}
 
-function hitungKembalian(){
- kembalian.innerText = bayar.value-total.innerText;
-}
+function hitungKembalian(){kembalian.textContent=bayar.value-total.textContent;}
 
-// selesai (fix stok issue)
-function selesai(){
- for(const item of keranjangData){
-  const index=dataProduk.findIndex(p=>p.nama===item.nama);
-  const produk=dataProduk[index];
-
-  if(produk.stok < item.qty){
-    alert('❌ Stok tidak cukup untuk '+produk.nama+'\nHapus item ini dulu!');
-    return; // STOP transaksi
-  }
- 
- }
-
- // kalau aman baru lanjut
- keranjangData.forEach(item=>{
-  const index=dataProduk.findIndex(p=>p.nama===item.nama);
-  const produk=dataProduk[index];
-
-  db.collection('produk').doc(docIds[index]).update({
-    stok: produk.stok - item.qty
-  });
- });
-
- keranjangData=[];
- renderKeranjang();
- alert('✅ Transaksi selesai');
-}
 function cetakStruk(){
- let s = 'KIOS 88\n================\n';
-
- keranjangData.forEach(i=>{
-  s += `${i.nama} x${i.qty} = Rp ${i.total}\n`;
- });
-
- s += '----------------\n';
- s += 'TOTAL: Rp ' + total.innerText + '\n';
- s += 'BAYAR: Rp ' + (bayar.value || 0) + '\n';
- s += 'KEMBALI: Rp ' + (kembalian.innerText || 0) + '\n';
- s += '================\n';
- s += 'Terima kasih 🙏';
-
- const w = window.open('', '', 'width=300,height=600');
+ let s='KIOS 88\n====\n';
+ keranjangData.forEach(i=>{s+=`${i.nama} x${i.qty} = ${i.total}\n`});
+ s+=`TOTAL: ${total.textContent}\nBAYAR: ${bayar.value}\nKEMBALI: ${kembalian.textContent}`;
+ const w=window.open('','','width=300');
  w.document.write('<pre>'+s+'</pre>');
  w.print();
 }
+
+function selesai(){
+ for(const item of keranjangData){
+  const i=dataProduk.findIndex(p=>p.nama===item.nama);
+  if(dataProduk[i].stok < item.qty){
+    alert('Stok tidak cukup: '+item.nama);
+    return;
+  }
+ }
+ keranjangData.forEach(item=>{
+  const i=dataProduk.findIndex(p=>p.nama===item.nama);
+  db.collection('produk').doc(docIds[i]).update({stok:dataProduk[i].stok-item.qty});
+ });
+ keranjangData=[];
+ renderKeranjang();
+ alert('Transaksi selesai');
+}
+
+// BARCODE
+setTimeout(()=>{
+ const scanner=new Html5Qrcode("reader");
+ scanner.start({facingMode:"environment"},{fps:10},code=>{
+  const p=dataProduk.find(x=>x.barcode==code);
+  if(p) addKeranjang(p);
+ });
+},1000);
+
 </script>
 </body>
 </html>
