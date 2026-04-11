@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 - FINAL CLEAN FIXED</title>
+<title>KIOS 88 - FINAL PRO FIX</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
@@ -13,22 +13,24 @@
 body{font-family:Arial;margin:0;background:#eef6ff}
 header{background:#007bff;color:#fff;padding:15px}
 .container{padding:15px}
-button{padding:10px;margin:4px;border-radius:8px;border:none;cursor:pointer}
-input{padding:8px;margin:5px}
+button{padding:8px 10px;margin:4px;border:none;border-radius:8px;cursor:pointer}
+input{padding:6px;margin:4px}
 .card{background:#fff;padding:12px;margin:10px 0;border-radius:10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
 .item{border:1px solid #ccc;padding:10px;border-radius:8px;cursor:pointer;position:relative}
 .delete-btn{position:absolute;bottom:5px;right:5px;background:red;color:#fff}
+.edit-btn{position:absolute;bottom:5px;left:5px;background:orange;color:#fff}
 .active{background:#007bff;color:#fff}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center}
+.modal-box{background:#fff;padding:20px;border-radius:10px}
 </style>
 </head>
 <body>
-<header>🔥 KIOS 88 - FINAL CLEAN FIXED</header>
+<header>🔥 KIOS 88 FINAL PRO FIX</header>
 
 <div class="container">
 
 <div class="card">
-<h3>Tambah Produk</h3>
 <input id="nama" placeholder="Nama">
 <input id="kategori" placeholder="Kategori">
 <input id="barcode" placeholder="Barcode">
@@ -39,25 +41,21 @@ input{padding:8px;margin:5px}
 </div>
 
 <div class="card">
-<h3>Import Excel</h3>
 <input type="file" id="fileInput">
 <button id="btnImport">Import</button>
 </div>
 
 <div class="card">
-<h3>Scan Barcode</h3>
 <div id="reader" style="width:250px"></div>
 </div>
 
 <div class="card">
-<h3>Produk</h3>
 <input id="search" placeholder="Cari...">
 <div id="kategoriFilter"></div>
 <div id="produkGrid" class="grid"></div>
 </div>
 
 <div class="card">
-<h3>Keranjang</h3>
 <div id="keranjang"></div>
 <p>Total: Rp <span id="total">0</span></p>
 <input id="bayar" type="number" placeholder="Bayar">
@@ -69,25 +67,36 @@ input{padding:8px;margin:5px}
 
 </div>
 
+<!-- MODAL EDIT -->
+<div id="modalEdit" class="modal">
+ <div class="modal-box">
+  <h3>Edit Produk</h3>
+  <input id="editNama">
+  <input id="editHarga" type="number">
+  <input id="editStok" type="number">
+  <button id="btnSaveEdit">Simpan</button>
+  <button onclick="modalEdit.style.display='none'">Batal</button>
+ </div>
+</div>
+
 <script>
 const firebaseConfig={apiKey:"AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",authDomain:"kios-88.firebaseapp.com",projectId:"kios-88"};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
-let dataProduk=[],docIds=[],keranjangData=[],kategoriAktif=null;
+let dataProduk=[],keranjangData=[],kategoriAktif=null,editId=null;
 
-// EVENTS
 btnTambah.onclick=tambahProduk;
 btnImport.onclick=importExcel;
 search.onkeyup=renderProduk;
 btnHitung.onclick=hitungKembalian;
 btnStruk.onclick=cetakStruk;
 btnSelesai.onclick=selesai;
+btnSaveEdit.onclick=simpanEdit;
 
-// FIRESTORE
+// REALTIME FIX (ID NEMPEL)
 db.collection('produk').onSnapshot(snap=>{
- dataProduk=snap.docs.map(d=>d.data());
- docIds=snap.docs.map(d=>d.id);
+ dataProduk=snap.docs.map(d=>({id:d.id,...d.data()}));
  renderKategori();
  renderProduk();
 });
@@ -105,91 +114,92 @@ function tambahProduk(){
 
 function importExcel(){
  const file=fileInput.files[0];
- if(!file) return alert('Pilih file dulu');
+ if(!file)return alert('Pilih file');
  const reader=new FileReader();
  reader.onload=e=>{
   const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
   const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
   data.forEach(i=>{
    db.collection('produk').add({
     nama:i.nama,
     kategori:(i.kategori||'lainnya').toLowerCase(),
     barcode:i.barcode||'',
-    harga_modal:Number(i.harga_modal)||0,
-    harga_jual:Number(i.harga_jual)||0,
-    stok:Number(i.stok)||0
+    harga_modal:+i.harga_modal||0,
+    harga_jual:+i.harga_jual||0,
+    stok:+i.stok||0
    });
   });
-
   alert('Import sukses');
  };
  reader.readAsArrayBuffer(file);
 }
 
 function renderKategori(){
- const list=[...new Set(dataProduk.map(p=>p.kategori||'lainnya'))];
+ const list=[...new Set(dataProduk.map(p=>p.kategori))];
  kategoriFilter.innerHTML='';
-
  list.forEach(k=>{
   const btn=document.createElement('button');
-  btn.textContent=k.toUpperCase();
-  if(kategoriAktif===k) btn.classList.add("active");
-
+  btn.textContent=k;
+  if(kategoriAktif===k)btn.classList.add('active');
   btn.onclick=()=>{
     kategoriAktif=(kategoriAktif===k)?null:k;
     renderKategori();
     renderProduk();
   };
-
   kategoriFilter.appendChild(btn);
  });
 }
 
 function renderProduk(){
  produkGrid.innerHTML='';
- if(!kategoriAktif) return;
-
+ if(!kategoriAktif)return;
  const q=search.value.toLowerCase();
-
  dataProduk
  .filter(p=>p.kategori===kategoriAktif)
  .filter(p=>p.nama.toLowerCase().includes(q))
- .forEach((p,i)=>{
+ .forEach(p=>{
   const el=document.createElement('div');
   el.className='item';
-
   el.innerHTML=`${p.nama}<br>Rp ${p.harga_jual}<br>Stok:${p.stok}`;
-
   el.onclick=()=>addKeranjang(p);
 
   const del=document.createElement('button');
   del.textContent='Hapus';
   del.className='delete-btn';
+  del.onclick=(e)=>{e.stopPropagation();hapusProduk(p.id)};
 
-  del.onclick=(e)=>{
-    e.stopPropagation();
-    hapusProduk(i);
-  };
+  const edit=document.createElement('button');
+  edit.textContent='Edit';
+  edit.className='edit-btn';
+  edit.onclick=(e)=>{e.stopPropagation();bukaEdit(p)};
 
   el.appendChild(del);
+  el.appendChild(edit);
   produkGrid.appendChild(el);
  });
 }
 
-function hapusProduk(i){
- const id=docIds[i];
-
- if(!id){
-  alert('ID tidak ditemukan');
-  return;
+function hapusProduk(id){
+ if(confirm('Hapus produk?')){
+  db.collection('produk').doc(id).delete();
  }
+}
 
- if(confirm('Yakin hapus produk?')){
-  db.collection('produk').doc(id).delete()
-  .then(()=>console.log('deleted'))
-  .catch(err=>alert(err));
- }
+function bukaEdit(p){
+ editId=p.id;
+ editNama.value=p.nama;
+ editHarga.value=p.harga_jual;
+ editStok.value=p.stok;
+ modalEdit.style.display='flex';
+}
+
+function simpanEdit(){
+ db.collection('produk').doc(editId).update({
+  nama:editNama.value,
+  harga_jual:+editHarga.value,
+  stok:+editStok.value
+ });
+ modalEdit.style.display='none';
 }
 
 function addKeranjang(p){
@@ -204,11 +214,9 @@ function renderKeranjang(){
  keranjangData.forEach((i,idx)=>{
   const div=document.createElement('div');
   div.innerHTML=`${i.nama} x${i.qty} = Rp ${i.total}`;
-
   const btn=document.createElement('button');
   btn.textContent='X';
-  btn.onclick=()=>hapusItem(idx);
-
+  btn.onclick=()=>{keranjangData.splice(idx,1);renderKeranjang()};
   div.appendChild(btn);
   keranjang.appendChild(div);
   t+=i.total;
@@ -216,14 +224,12 @@ function renderKeranjang(){
  total.textContent=t;
 }
 
-function hapusItem(i){keranjangData.splice(i,1);renderKeranjang();}
-
 function hitungKembalian(){kembalian.textContent=bayar.value-total.textContent;}
 
 function cetakStruk(){
- let s='KIOS 88\n====\n';
+ let s='KIOS 88\n';
  keranjangData.forEach(i=>{s+=`${i.nama} x${i.qty} = ${i.total}\n`});
- s+=`TOTAL: ${total.textContent}\nBAYAR: ${bayar.value}\nKEMBALI: ${kembalian.textContent}`;
+ s+=`TOTAL:${total.textContent}`;
  const w=window.open('','','width=300');
  w.document.write('<pre>'+s+'</pre>');
  w.print();
@@ -231,23 +237,14 @@ function cetakStruk(){
 
 function selesai(){
  for(const item of keranjangData){
-  const i=dataProduk.findIndex(p=>p.nama===item.nama);
-  if(dataProduk[i].stok < item.qty){
-    alert('Stok tidak cukup: '+item.nama);
-    return;
-  }
+  const p=dataProduk.find(x=>x.nama===item.nama);
+  if(p.stok < item.qty){alert('Stok tidak cukup');return;}
  }
-
  keranjangData.forEach(item=>{
-  const i=dataProduk.findIndex(p=>p.nama===item.nama);
-  db.collection('produk').doc(docIds[i]).update({
-    stok:dataProduk[i].stok-item.qty
-  });
+  const p=dataProduk.find(x=>x.nama===item.nama);
+  db.collection('produk').doc(p.id).update({stok:p.stok-item.qty});
  });
-
- keranjangData=[];
- renderKeranjang();
- alert('Transaksi selesai');
+ keranjangData=[];renderKeranjang();alert('Selesai');
 }
 
 // barcode
@@ -255,7 +252,7 @@ setTimeout(()=>{
  const scanner=new Html5Qrcode("reader");
  scanner.start({facingMode:"environment"},{fps:10},code=>{
   const p=dataProduk.find(x=>x.barcode==code);
-  if(p) addKeranjang(p);
+  if(p)addKeranjang(p);
  }).catch(()=>{});
 },1000);
 
