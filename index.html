@@ -193,24 +193,7 @@ function selesai(){
     alert('❌ Stok tidak cukup untuk '+produk.nama+'\nHapus item ini dulu!');
     return; // STOP transaksi
   }
-   function cetakStruk(){
- let s = 'KIOS 88\n================\n';
-
- keranjangData.forEach(i=>{
-  s += `${i.nama} x${i.qty} = Rp ${i.total}\n`;
- });
-
- s += '----------------\n';
- s += 'TOTAL: Rp ' + total.innerText + '\n';
- s += 'BAYAR: Rp ' + (bayar.value || 0) + '\n';
- s += 'KEMBALI: Rp ' + (kembalian.innerText || 0) + '\n';
- s += '================\n';
- s += 'Terima kasih 🙏';
-
- const w = window.open('', '', 'width=300,height=600');
- w.document.write('<pre>' + s + '</pre>');
- w.print();
-}
+ 
  }
 
  // kalau aman baru lanjut
@@ -227,7 +210,24 @@ function selesai(){
  renderKeranjang();
  alert('✅ Transaksi selesai');
 }
+function cetakStruk(){
+ let s = 'KIOS 88\n================\n';
 
+ keranjangData.forEach(i=>{
+  s += `${i.nama} x${i.qty} = Rp ${i.total}\n`;
+ });
+
+ s += '----------------\n';
+ s += 'TOTAL: Rp ' + total.innerText + '\n';
+ s += 'BAYAR: Rp ' + (bayar.value || 0) + '\n';
+ s += 'KEMBALI: Rp ' + (kembalian.innerText || 0) + '\n';
+ s += '================\n';
+ s += 'Terima kasih 🙏';
+
+ const w = window.open('', '', 'width=300,height=600');
+ w.document.write('<pre>'+s+'</pre>');
+ w.print();
+}
 </script>
 </body>
 </html>
