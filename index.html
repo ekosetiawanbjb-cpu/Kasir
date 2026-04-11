@@ -2,30 +2,69 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 STABLE</title>
+<title>KIOS 88 PRO STEP 1</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
 body{font-family:Arial;margin:0;background:#eef6ff}
-header{background:#1976d2;color:#fff;padding:15px}
+header{background:#1976d2;color:#fff;padding:15px;font-weight:bold}
 .container{padding:15px}
-.card{background:#fff;padding:15px;margin-bottom:15px;border-radius:10px}
-button{padding:8px;margin:4px;border:none;border-radius:8px;cursor:pointer}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.item{border:1px solid #ccc;padding:10px;border-radius:8px}
+
+.card{
+ background:#fff;
+ padding:15px;
+ margin-bottom:15px;
+ border-radius:10px;
+ box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+button{
+ padding:8px 12px;
+ border:none;
+ border-radius:8px;
+ cursor:pointer;
+ margin:3px;
+}
+
+.btn-primary{background:#1976d2;color:#fff}
+.btn-danger{background:red;color:#fff}
+
+.grid{
+ display:grid;
+ grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+ gap:10px;
+}
+
+.item{
+ border:1px solid #ddd;
+ padding:10px;
+ border-radius:8px;
+ cursor:pointer;
+ display:flex;
+ flex-direction:column;
+ justify-content:space-between;
+}
+
+#kategoriFilter button{
+ background:#ddd;
+}
+
+#kategoriFilter .active{
+ background:#1976d2;
+ color:#fff;
+}
 </style>
 </head>
 
 <body>
 
-<header>🔥 KIOS 88 STABLE</header>
+<header>🔥 KIOS 88 PRO STEP 1</header>
 
 <div class="container">
 
-<button onclick="toggleForm()">+ Kelola Produk</button>
+<button class="btn-primary" onclick="toggleForm()">+ Kelola Produk</button>
 
 <div id="formArea" style="display:none" class="card">
 <input id="nama" placeholder="Nama">
@@ -34,7 +73,7 @@ button{padding:8px;margin:4px;border:none;border-radius:8px;cursor:pointer}
 <input id="modal" type="number" placeholder="Modal">
 <input id="jual" type="number" placeholder="Jual">
 <input id="stok" type="number" placeholder="Stok">
-<button onclick="tambahProduk()">Tambah</button>
+<button class="btn-primary" onclick="tambahProduk()">Tambah</button>
 </div>
 
 <div class="card">
@@ -46,16 +85,18 @@ button{padding:8px;margin:4px;border:none;border-radius:8px;cursor:pointer}
 <div class="card">
 <div id="keranjang"></div>
 <p>Total: Rp <span id="total">0</span></p>
+
 <input id="bayar" placeholder="Bayar">
-<button onclick="hitungKembalian()">Hitung</button>
+<button class="btn-primary" onclick="hitungKembalian()">Hitung</button>
+
 <p>Kembalian: Rp <span id="kembalian">0</span></p>
-<button onclick="cetakRawBT()">Print Bluetooth</button>
+
+<button class="btn-primary" onclick="cetakRawBT()">Print Bluetooth</button>
 </div>
 
 </div>
 
 <script>
-
 const firebaseConfig={
  apiKey:"AIzaSyDGZ7pQrWMxNXBWP7Dnxqq7M8pheGHaUQ4",
  authDomain:"kios-88.firebaseapp.com",
@@ -81,7 +122,7 @@ db.collection('produk').onSnapshot(snap=>{
 function tambahProduk(){
  db.collection('produk').add({
   nama:nama.value,
-  kategori:(kategori.value||'lainnya'),
+  kategori:(kategori.value||'lainnya').toLowerCase(),
   barcode:barcode.value||'-',
   harga_modal:+modal.value,
   harga_jual:+jual.value,
@@ -92,66 +133,112 @@ function tambahProduk(){
 function renderKategori(){
  const list=[...new Set(dataProduk.map(p=>p.kategori))];
  kategoriFilter.innerHTML='';
+
  list.forEach(k=>{
   const btn=document.createElement('button');
   btn.textContent=k.toUpperCase();
+
+  if(kategoriAktif===k) btn.classList.add('active');
+
   btn.onclick=()=>{
     kategoriAktif=(kategoriAktif===k)?null:k;
+    renderKategori();
     renderProduk();
   };
+
   kategoriFilter.appendChild(btn);
  });
 }
 
 function renderProduk(){
  produkGrid.innerHTML='';
- if(!kategoriAktif)return;
+ if(!kategoriAktif) return;
+
+ const q=search.value.toLowerCase();
 
  dataProduk
  .filter(p=>p.kategori===kategoriAktif)
+ .filter(p=>p.nama.toLowerCase().includes(q))
  .forEach(p=>{
-  const div=document.createElement('div');
-  div.className='item';
-  div.innerHTML=`${p.nama}<br>Rp ${p.harga_jual}`;
-  div.onclick=()=>addKeranjang(p);
-  produkGrid.appendChild(div);
+  const el=document.createElement('div');
+  el.className='item';
+
+  el.innerHTML=`
+   <div>
+     <b>${p.nama}</b><br>
+     Rp ${p.harga_jual}<br>
+     Stok: ${p.stok}
+   </div>
+  `;
+
+  el.onclick=()=>addKeranjang(p);
+
+  produkGrid.appendChild(el);
  });
 }
 
 function addKeranjang(p){
- keranjangData.push(p);
+ const ex=keranjangData.find(x=>x.nama===p.nama);
+
+ if(ex){
+  ex.qty++;
+  ex.total+=p.harga_jual;
+ }else{
+  keranjangData.push({
+    nama:p.nama,
+    harga:p.harga_jual,
+    qty:1,
+    total:p.harga_jual
+  });
+ }
+
  renderKeranjang();
 }
 
 function renderKeranjang(){
  let t=0;
  keranjang.innerHTML='';
- keranjangData.forEach(p=>{
-  keranjang.innerHTML+=p.nama+'<br>';
-  t+=p.harga_jual;
+
+ keranjangData.forEach((i,idx)=>{
+  keranjang.innerHTML+=`
+    ${i.nama} x${i.qty} = Rp ${i.total}
+    <button onclick="hapusItem(${idx})">X</button><br>
+  `;
+  t+=i.total;
  });
+
  total.textContent=t;
 }
 
+function hapusItem(i){
+ keranjangData.splice(i,1);
+ renderKeranjang();
+}
+
 function hitungKembalian(){
- const kembali = bayar.value - total.textContent;
- kembalian.textContent = kembali;
+ const totalBelanja=Number(total.textContent||0);
+ const uang=Number(bayar.value||0);
+ const kembali=uang-totalBelanja;
+ kembalian.textContent = kembali>=0 ? kembali : 0;
 }
 
 function generateStruk(){
- let s='KIOS 88\n';
+ let s='KIOS 88\n================\n';
+
  keranjangData.forEach(i=>{
-  s+=i.nama+' '+i.harga_jual+'\n';
+  s+=i.nama+' x'+i.qty+' = '+i.total+'\n';
  });
- s+='Total:'+total.textContent;
+
+ s+='TOTAL: '+total.textContent+'\n';
+ s+='Terima kasih 🙏';
+
  return s;
 }
 
 function cetakRawBT(){
- const text = encodeURIComponent(generateStruk());
+ const text=encodeURIComponent(generateStruk());
  window.location.href='rawbt://print?text='+text;
 }
-
 </script>
 
 </body>
