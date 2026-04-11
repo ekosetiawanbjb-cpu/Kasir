@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 - POS FULL CLEAN</title>
+<title>KIOS 88 - FINAL CLEAN FIXED</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
@@ -17,12 +17,13 @@ button{padding:10px;margin:4px;border-radius:8px;border:none;cursor:pointer}
 input{padding:8px;margin:5px}
 .card{background:#fff;padding:12px;margin:10px 0;border-radius:10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
-.item{border:1px solid #ccc;padding:10px;border-radius:8px;cursor:pointer}
+.item{border:1px solid #ccc;padding:10px;border-radius:8px;cursor:pointer;position:relative}
+.delete-btn{position:absolute;bottom:5px;right:5px;background:red;color:#fff}
 .active{background:#007bff;color:#fff}
 </style>
 </head>
 <body>
-<header>🔥 KIOS 88 - FULL CLEAN</header>
+<header>🔥 KIOS 88 - FINAL CLEAN FIXED</header>
 
 <div class="container">
 
@@ -76,12 +77,12 @@ const db=firebase.firestore();
 let dataProduk=[],docIds=[],keranjangData=[],kategoriAktif=null;
 
 // EVENTS
-btnTambah.addEventListener("click",tambahProduk);
-btnImport.addEventListener("click",importExcel);
-search.addEventListener("keyup",renderProduk);
-btnHitung.addEventListener("click",hitungKembalian);
-btnStruk.addEventListener("click",cetakStruk);
-btnSelesai.addEventListener("click",selesai);
+btnTambah.onclick=tambahProduk;
+btnImport.onclick=importExcel;
+search.onkeyup=renderProduk;
+btnHitung.onclick=hitungKembalian;
+btnStruk.onclick=cetakStruk;
+btnSelesai.onclick=selesai;
 
 // FIRESTORE
 db.collection('produk').onSnapshot(snap=>{
@@ -109,6 +110,7 @@ function importExcel(){
  reader.onload=e=>{
   const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
   const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
   data.forEach(i=>{
    db.collection('produk').add({
     nama:i.nama,
@@ -119,6 +121,7 @@ function importExcel(){
     stok:Number(i.stok)||0
    });
   });
+
   alert('Import sukses');
  };
  reader.readAsArrayBuffer(file);
@@ -127,15 +130,18 @@ function importExcel(){
 function renderKategori(){
  const list=[...new Set(dataProduk.map(p=>p.kategori||'lainnya'))];
  kategoriFilter.innerHTML='';
+
  list.forEach(k=>{
   const btn=document.createElement('button');
   btn.textContent=k.toUpperCase();
   if(kategoriAktif===k) btn.classList.add("active");
-  btn.addEventListener("click",()=>{
+
+  btn.onclick=()=>{
     kategoriAktif=(kategoriAktif===k)?null:k;
     renderKategori();
     renderProduk();
-  });
+  };
+
   kategoriFilter.appendChild(btn);
  });
 }
@@ -143,17 +149,47 @@ function renderKategori(){
 function renderProduk(){
  produkGrid.innerHTML='';
  if(!kategoriAktif) return;
+
  const q=search.value.toLowerCase();
+
  dataProduk
  .filter(p=>p.kategori===kategoriAktif)
  .filter(p=>p.nama.toLowerCase().includes(q))
  .forEach((p,i)=>{
   const el=document.createElement('div');
   el.className='item';
+
   el.innerHTML=`${p.nama}<br>Rp ${p.harga_jual}<br>Stok:${p.stok}`;
-  el.addEventListener("click",()=>addKeranjang(p));
+
+  el.onclick=()=>addKeranjang(p);
+
+  const del=document.createElement('button');
+  del.textContent='Hapus';
+  del.className='delete-btn';
+
+  del.onclick=(e)=>{
+    e.stopPropagation();
+    hapusProduk(i);
+  };
+
+  el.appendChild(del);
   produkGrid.appendChild(el);
  });
+}
+
+function hapusProduk(i){
+ const id=docIds[i];
+
+ if(!id){
+  alert('ID tidak ditemukan');
+  return;
+ }
+
+ if(confirm('Yakin hapus produk?')){
+  db.collection('produk').doc(id).delete()
+  .then(()=>console.log('deleted'))
+  .catch(err=>alert(err));
+ }
 }
 
 function addKeranjang(p){
@@ -168,9 +204,11 @@ function renderKeranjang(){
  keranjangData.forEach((i,idx)=>{
   const div=document.createElement('div');
   div.innerHTML=`${i.nama} x${i.qty} = Rp ${i.total}`;
+
   const btn=document.createElement('button');
   btn.textContent='X';
-  btn.addEventListener("click",()=>hapusItem(idx));
+  btn.onclick=()=>hapusItem(idx);
+
   div.appendChild(btn);
   keranjang.appendChild(div);
   t+=i.total;
@@ -199,22 +237,26 @@ function selesai(){
     return;
   }
  }
+
  keranjangData.forEach(item=>{
   const i=dataProduk.findIndex(p=>p.nama===item.nama);
-  db.collection('produk').doc(docIds[i]).update({stok:dataProduk[i].stok-item.qty});
+  db.collection('produk').doc(docIds[i]).update({
+    stok:dataProduk[i].stok-item.qty
+  });
  });
+
  keranjangData=[];
  renderKeranjang();
  alert('Transaksi selesai');
 }
 
-// BARCODE
+// barcode
 setTimeout(()=>{
  const scanner=new Html5Qrcode("reader");
  scanner.start({facingMode:"environment"},{fps:10},code=>{
   const p=dataProduk.find(x=>x.barcode==code);
   if(p) addKeranjang(p);
- });
+ }).catch(()=>{});
 },1000);
 
 </script>
