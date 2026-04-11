@@ -223,7 +223,15 @@ function renderKeranjang(){
  });
  total.textContent=t;
 }
+ 
+function hitungKembalian(){
+  const totalBelanja = Number(total.textContent || 0);
+  const uangBayar = Number(bayar.value || 0);
 
+  const kembali = uangBayar - totalBelanja;
+
+  kembalian.textContent = kembali >= 0 ? kembali : 0;
+}
 function cetakStruk(){
  let s = 'KIOS 88\n================\n';
 
