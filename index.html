@@ -224,37 +224,23 @@ function renderKeranjang(){
  total.textContent=t;
 }
 
-function hitungKembalian(){kembalian.textContent=bayar.value-total.textContent;}
-
 function cetakStruk(){
- let s='KIOS 88
-================
-';
- keranjangData.forEach(i=>{
-  s+=`${i.nama} x${i.qty} = Rp ${i.total}
-`;
- });
- s+='----------------
-';
- s+=`TOTAL: Rp ${total.textContent}
-`;
- s+=`BAYAR: Rp ${bayar.value || 0}
-`;
- s+=`KEMBALI: Rp ${kembalian.textContent}
-`;
- s+='================
-';
- s+='Terima kasih telah berbelanja 🙏
-';
- s+='KIOS 88';
+ let s = 'KIOS 88\n================\n';
 
- const w=window.open('','','width=300');
- w.document.write('<pre>'+s+'</pre>');
- w.print();
-} x${i.qty} = ${i.total}\n`});
- s+=`TOTAL:${total.textContent}`;
- const w=window.open('','','width=300');
- w.document.write('<pre>'+s+'</pre>');
+ keranjangData.forEach(function(i){
+  s += i.nama + ' x' + i.qty + ' = Rp ' + i.total + '\n';
+ });
+
+ s += '----------------\n';
+ s += 'TOTAL: Rp ' + total.textContent + '\n';
+ s += 'BAYAR: Rp ' + (bayar.value || 0) + '\n';
+ s += 'KEMBALI: Rp ' + kembalian.textContent + '\n';
+ s += '================\n';
+ s += 'Terima kasih telah berbelanja 🙏\n';
+ s += 'KIOS 88';
+
+ const w = window.open('', '', 'width=300');
+ w.document.write('<pre>' + s + '</pre>');
  w.print();
 }
 
