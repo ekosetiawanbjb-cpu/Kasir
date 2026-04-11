@@ -389,8 +389,21 @@ function cetakStruk(){
 }
 
 function cetakRawBT(){
- const text=encodeURIComponent(generateStruk());
- window.location.href='rawbt://print?text='+text;
+ let struk = generateStruk();
+
+ // 🔥 format center pakai ESC/POS basic
+ let text =
+   "[C]<b>KIOS 88</b>\n" +
+ "[C]================\n" +
+   struk +
+   "\n[C]<b>Terima Kasih 🙏<b>\n" +
+   "[C]<b>KIOS 88<b>\n";
+
+ // encode biar aman
+ let encoded = encodeURIComponent(text);
+
+ // 🔥 gunakan intent RAWBT (lebih clean)
+ window.location.href = "intent://print?text=" + encoded + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
 }
 
 function selesai(){
