@@ -382,28 +382,29 @@ function generateStruk(){
  return s;
 }
 
-function cetakStruk(){
- const w=window.open('','','width=300');
- w.document.write('<pre>'+generateStruk()+'</pre>');
- w.print();
-}
-
 function cetakRawBT(){
- let struk = generateStruk();
+ let text = "[C]<b>KIOS 88</b>\n";
+ text += "[C]================\n";
 
- // 🔥 format center pakai ESC/POS basic
- let text =
-   "[C]KIOS 88\n" +
- "[C]================\n" +
-   struk +
-   "\n[C]Terima Kasih 🙏\n";
+ keranjangData.forEach(i=>{
+  text += "[L]" + i.nama + "\n";
+  text += "[R]" + i.qty + " x " + i.harga + " = " + i.total + "\n";
+ });
 
- // encode biar aman
+ text += "[C]----------------\n";
+ text += "[R]TOTAL: " + total.textContent + "\n";
+ text += "[C]================\n";
+ text += "[C]Terima Kasih 🙏\n";
+ text += "[C]KIOS 88\n\n\n";
+
  let encoded = encodeURIComponent(text);
 
- // 🔥 gunakan intent RAWBT (lebih clean)
- window.location.href = "intent://print?text=" + encoded + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
+ // 🔥 INI KUNCI NYA (intent, bukan rawbt://)
+ window.location.href =
+ "intent://print?text=" + encoded +
+ "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
 }
+
 
 function selesai(){
  for(const item of keranjangData){
