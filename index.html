@@ -384,6 +384,8 @@ function generateStruk(){
 
 function cetakRawBT(){
 
+ console.log("PRINT KE RAWBT..."); // 🔥 TARUH DI SINI
+
  let text = "";
 
  text += "        KIOS 88\n";
@@ -407,7 +409,11 @@ function cetakRawBT(){
  text += "     Terima Kasih\n";
  text += "        KIOS 88\n\n\n";
 
- window.location.href = "rawbt:" + text;
+ let encoded = encodeURIComponent(text);
+
+ let url = "intent://print?text=" + encoded + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
+
+ window.location.href = url;
 }
 
 function selesai(){
