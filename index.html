@@ -384,24 +384,31 @@ function generateStruk(){
 
 function cetakRawBT(){
 
- let text = "[C]\x1B\x45\x01KIOS 88\x1B\x45\x00\n";
- text += "[C]================\n";
+ let text = "";
+
+ text += "        KIOS 88\n";
+ text += "-----------------------------\n";
 
  keranjangData.forEach(i=>{
-  text += "[L]" + i.nama + "\n";
-  text += "[R]" + i.qty + " x " + i.harga + " = " + i.total + "\n";
+  let nama = i.nama.substring(0,20);
+  let kanan = (i.qty + "x" + i.harga).padStart(10);
+  let total = (i.total).toString().padStart(10);
+
+  text += nama + "\n";
+  text += kanan + total + "\n";
  });
 
- text += "[C]----------------\n";
- text += "[R]TOTAL: " + total.textContent + "\n";
- text += "[C]================\n";
- text += "[C]Terima Kasih\n";
- text += "[C]KIOS 88\n\n\n";
+ text += "-----------------------------\n";
 
- // 🔥 KUNCI: TANPA encodeURIComponent
+ let totalText = ("TOTAL: " + totalBelanja).padStart(30);
+ text += totalText + "\n";
+
+ text += "-----------------------------\n";
+ text += "     Terima Kasih\n";
+ text += "        KIOS 88\n\n\n";
+
  window.location.href = "rawbt:" + text;
 }
-
 
 function selesai(){
  for(const item of keranjangData){
