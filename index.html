@@ -383,7 +383,8 @@ function generateStruk(){
 }
 
 function cetakRawBT(){
- let text = "[C]<b>KIOS 88</b>\n";
+
+ let text = "[C]\x1B\x45\x01KIOS 88\x1B\x45\x00\n";
  text += "[C]================\n";
 
  keranjangData.forEach(i=>{
@@ -394,15 +395,11 @@ function cetakRawBT(){
  text += "[C]----------------\n";
  text += "[R]TOTAL: " + total.textContent + "\n";
  text += "[C]================\n";
- text += "[C]Terima Kasih 🙏\n";
+ text += "[C]Terima Kasih\n";
  text += "[C]KIOS 88\n\n\n";
 
- let encoded = encodeURIComponent(text);
-
- // 🔥 INI KUNCI NYA (intent, bukan rawbt://)
- window.location.href =
- "intent://print?text=" + encoded +
- "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
+ // 🔥 KUNCI: TANPA encodeURIComponent
+ window.location.href = "rawbt:" + text;
 }
 
 
