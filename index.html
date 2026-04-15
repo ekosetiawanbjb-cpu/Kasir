@@ -489,7 +489,7 @@ window.cetakRawBT = function(){
 function selesai(){
 
   for(const item of keranjangData){
-    const p=dataProduk.find(x=>x.id===item.id);
+    const p = dataProduk.find(x=>x.id===item.id);
     if(p.stok < item.qty){
       alert("Stok tidak cukup!");
       return;
@@ -497,23 +497,17 @@ function selesai(){
   }
 
   keranjangData.forEach(item=>{
-    const p=dataProduk.find(x=>x.id===item.id);
+    const p = dataProduk.find(x=>x.id===item.id);
     db.collection('produk').doc(p.id).update({
-      stok:p.stok-item.qty
-    }
-  }
-
- keranjangData.forEach(item=>{
-  const p=dataProduk.find(x=>x.id===item.id);
-  db.collection('produk').doc(p.id).update({
-    stok:p.stok-item.qty
+      stok: p.stok - item.qty
+    });
   });
- });
 
+  // 🔥 update nomor transaksi
   nomorTransaksi++;
   localStorage.setItem("trx", nomorTransaksi);
 
-  keranjangData=[];
+  keranjangData = [];
   renderKeranjang();
 
   alert("Transaksi selesai!");
