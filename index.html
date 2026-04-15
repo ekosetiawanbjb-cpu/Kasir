@@ -387,14 +387,24 @@ window.cetakRawBT = function(){
 
  let text = "        KIOS 88\n";
  text += "-----------------------------\n";
- text += "TEST PRINT\n";
+
+ keranjangData.forEach(i=>{
+  text += i.nama + " x" + i.qty + " = " + i.total + "\n";
+ });
+
+ text += "-----------------------------\n";
+ text += "TOTAL: " + total.textContent + "\n";
  text += "-----------------------------\n";
  text += "     Terima Kasih\n\n\n";
 
- // 🔥 pakai rawbt://print (bukan intent)
- let encoded = encodeURIComponent(text);
-
- window.location.href = "rawbt://print?text=" + encoded;
+ // 🔥 pakai share (fix semua device)
+ if(navigator.share){
+   navigator.share({
+     text: text
+   });
+ }else{
+   alert("Browser tidak support share, pakai Chrome HP ya");
+ }
 }
 
 function selesai(){
