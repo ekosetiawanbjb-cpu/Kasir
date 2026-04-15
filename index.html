@@ -385,15 +385,16 @@ function generateStruk(){
 
 window.cetakRawBT = function(){
 
- console.log("PRINT KE RAWBT...");
+ let text = "        KIOS 88\n";
+ text += "-----------------------------\n";
+ text += "TEST PRINT\n";
+ text += "-----------------------------\n";
+ text += "     Terima Kasih\n\n\n";
 
- let text = "TEST PRINT\n\n\n";
-
+ // 🔥 pakai rawbt://print (bukan intent)
  let encoded = encodeURIComponent(text);
 
- let url = "intent://print?text=" + encoded + "#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;";
-
- window.location.href = url;
+ window.location.href = "rawbt://print?text=" + encoded;
 }
 
 function selesai(){
