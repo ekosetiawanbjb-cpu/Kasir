@@ -383,32 +383,11 @@ function generateStruk(){
  return s;
 }
 
-function cetakRawBT(){
+window.cetakRawBT = function(){
 
- console.log("PRINT KE RAWBT..."); // 🔥 TARUH DI SINI
+ console.log("PRINT KE RAWBT...");
 
- let text = "";
-
- text += "        KIOS 88\n";
- text += "-----------------------------\n";
-
- keranjangData.forEach(i=>{
-  let nama = i.nama.substring(0,20);
-  let kanan = (i.qty + "x" + i.harga).padStart(10);
-  let total = (i.total).toString().padStart(10);
-
-  text += nama + "\n";
-  text += kanan + total + "\n";
- });
-
- text += "-----------------------------\n";
-
- let totalText = ("TOTAL: " + totalBelanja).padStart(30);
- text += totalText + "\n";
-
- text += "-----------------------------\n";
- text += "     Terima Kasih\n";
- text += "        KIOS 88\n\n\n";
+ let text = "TEST PRINT\n\n\n";
 
  let encoded = encodeURIComponent(text);
 
