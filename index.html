@@ -9,17 +9,99 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-body{font-family:Arial;margin:0;background:#eef6ff}
-header{background:#1976d2;color:#fff;padding:15px;font-weight:bold}
-.container{padding:15px}
-.card{background:#fff;padding:15px;margin-bottom:15px;border-radius:10px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-.item{border:1px solid #ddd;padding:10px;border-radius:8px;cursor:pointer}
-button{padding:8px;border:none;border-radius:8px;margin:3px;cursor:pointer}
-.btn-warning{background:orange;color:#fff}
-.btn-danger{background:red;color:#fff}
-#kategoriFilter button{background:#ddd}
-#kategoriFilter .active{background:#1976d2;color:#fff}
+<style>
+
+body{
+  font-family: 'Segoe UI', Arial;
+  margin:0;
+  background:#f4f7fb;
+}
+
+header{
+  background:#1976d2;
+  color:#fff;
+  padding:15px;
+  font-size:20px;
+  font-weight:bold;
+}
+
+.container{
+  padding:15px;
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:15px;
+}
+
+.card{
+  background:#fff;
+  padding:15px;
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.08);
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:12px;
+}
+
+.item{
+  background:#fff;
+  border-radius:12px;
+  padding:10px;
+  cursor:pointer;
+  transition:0.2s;
+  border:1px solid #eee;
+}
+
+.item:hover{
+  transform:scale(1.03);
+  box-shadow:0 4px 12px rgba(0,0,0,0.1);
+}
+
+#kategoriFilter{
+  margin:10px 0;
+}
+
+#kategoriFilter button{
+  background:#e3eaf5;
+  border:none;
+  padding:6px 10px;
+  border-radius:20px;
+  margin:3px;
+  cursor:pointer;
+}
+
+#kategoriFilter .active{
+  background:#1976d2;
+  color:#fff;
+}
+
+#keranjang{
+  max-height:300px;
+  overflow:auto;
+  margin-bottom:10px;
+}
+
+button{
+  border:none;
+  border-radius:8px;
+  padding:8px 10px;
+  cursor:pointer;
+}
+
+button:hover{
+  opacity:0.9;
+}
+
+input{
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  width:100%;
+  margin-bottom:8px;
+}
+
 </style>
 </head>
 
@@ -28,6 +110,31 @@ button{padding:8px;border:none;border-radius:8px;margin:3px;cursor:pointer}
 <header>🔥 KIOS 88 FINAL</header>
 
 <div class="container">
+
+  <!-- KIRI (PRODUK) -->
+  <div class="card">
+    <input id="search" placeholder="Cari / Scan..." onkeyup="renderProduk()">
+    <div id="kategoriFilter"></div>
+    <div id="produkGrid" class="grid"></div>
+  </div>
+
+  <!-- KANAN (KASIR) -->
+  <div class="card">
+    <div id="keranjang"></div>
+
+    <p><b>Total: Rp <span id="total">0</span></b></p>
+
+    <input id="bayar" placeholder="Bayar">
+
+    <button onclick="hitungKembalian()">Hitung</button>
+
+    <p>Kembalian: Rp <span id="kembalian">0</span></p>
+
+    <button onclick="cetakRawBT()">Print</button>
+    <button onclick="selesai()">Selesai</button>
+  </div>
+
+</div>
 
 <div class="card">
 <input id="search" placeholder="Cari / Scan..." onkeyup="renderProduk()">
