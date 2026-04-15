@@ -459,6 +459,32 @@ function generateStruk(){
   return s;
 }
 
+  // 🔥 PRINT AUTO (kalau mau aktifin nanti)
+  // cetakRawBT();
+
+  // 🔥 UPDATE NOMOR TRANSAKSI
+  nomorTransaksi++;
+  localStorage.setItem("trx", nomorTransaksi);
+
+  keranjangData=[];
+  renderKeranjang();
+
+  alert("Transaksi selesai!");
+}
+
+window.cetakRawBT = function(){
+
+  const text = generateStruk(); // 🔥 INI KUNCINYA
+
+  if(navigator.share){
+    navigator.share({
+      text: text
+    });
+  }else{
+    alert("Browser tidak support share");
+  }
+}
+
 // 🔥 UPDATE DI FUNCTION selesai()
 function selesai(){
 
@@ -476,52 +502,6 @@ function selesai(){
       stok:p.stok-item.qty
     });
   });
-
-  // 🔥 PRINT AUTO (kalau mau aktifin nanti)
-  // cetakRawBT();
-
-  // 🔥 UPDATE NOMOR TRANSAKSI
-  nomorTransaksi++;
-  localStorage.setItem("trx", nomorTransaksi);
-
-  keranjangData=[];
-  renderKeranjang();
-
-  alert("Transaksi selesai!");
-}
-
-window.cetakRawBT = function(){
-
- let text = "        KIOS 88\n";
- text += "-----------------------------\n";
-
- keranjangData.forEach(i=>{
-  text += i.nama + " x" + i.qty + " = " + i.total + "\n";
- });
-
- text += "-----------------------------\n";
- text += "TOTAL: " + total.textContent + "\n";
- text += "-----------------------------\n";
- text += "     Terima Kasih\n\n\n";
-
- // 🔥 pakai share (fix semua device)
- if(navigator.share){
-   navigator.share({
-     text: text
-   });
- }else{
-   alert("Browser tidak support share, pakai Chrome HP ya");
- }
-}
-
-function selesai(){
- for(const item of keranjangData){
-  const p=dataProduk.find(x=>x.id===item.id);
-  if(p.stok < item.qty){
-    alert("Stok tidak cukup!");
-    return;
-  }
- }
 
  keranjangData.forEach(item=>{
   const p=dataProduk.find(x=>x.id===item.id);
