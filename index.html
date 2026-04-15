@@ -459,28 +459,14 @@ function generateStruk(){
   return s;
 }
 
-  // 🔥 PRINT AUTO (kalau mau aktifin nanti)
-  // cetakRawBT();
-
-  // 🔥 UPDATE NOMOR TRANSAKSI
-  nomorTransaksi++;
-  localStorage.setItem("trx", nomorTransaksi);
-
-  keranjangData=[];
-  renderKeranjang();
-
-  alert("Transaksi selesai!");
-}
-
 window.cetakRawBT = function(){
-
   const text = generateStruk(); // 🔥 INI KUNCINYA
-
   if(navigator.share){
     navigator.share({
       text: text
     });
-  }else{
+  }
+  else{
     alert("Browser tidak support share");
   }
 }
@@ -493,13 +479,6 @@ function selesai(){
     if(p.stok < item.qty){
       alert("Stok tidak cukup!");
       return;
-    }
-  }
-
-  keranjangData.forEach(item=>{
-    const p=dataProduk.find(x=>x.id===item.id);
-    db.collection('produk').doc(p.id).update({
-      stok:p.stok-item.qty
     }
   }
 
