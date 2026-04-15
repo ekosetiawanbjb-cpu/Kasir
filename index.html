@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>KIOS 88 PRO FINAL</title>
+<title><b>KIOS 88</b></title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -411,7 +411,9 @@ function generateStruk(){
   let s = "";
 
   // HEADER
+  s += "\x1B\x45\x01"; // 🔥 ON BOLD
   s += padLeft("KIOS 88", (width + "KIOS 88".length)/2) + "\n";
+  s += "\x1B\x45\x00"; // OFF BOLD
   s += "-".repeat(width) + "\n";
 
   s += "No  : " + trx + "\n";
@@ -451,9 +453,10 @@ function generateStruk(){
   s += "-".repeat(width) + "\n";
 
   // FOOTER
+  s += "\x1B\x45\x01";
   s += padLeft("Terima Kasih", (width + "Terima Kasih".length)/2) + "\n";
   s += padLeft("KIOS 88", (width + "KIOS 88".length)/2) + "\n\n\n";
-
+  s += "\x1B\x45\x00";
   return s;
 }
 
