@@ -500,8 +500,8 @@ function selesai(){
     const p=dataProduk.find(x=>x.id===item.id);
     db.collection('produk').doc(p.id).update({
       stok:p.stok-item.qty
-    });
-  });
+    }
+  }
 
  keranjangData.forEach(item=>{
   const p=dataProduk.find(x=>x.id===item.id);
@@ -510,9 +510,13 @@ function selesai(){
   });
  });
 
- keranjangData=[];
- renderKeranjang();
- alert("Transaksi selesai!");
+  nomorTransaksi++;
+  localStorage.setItem("trx", nomorTransaksi);
+
+  keranjangData=[];
+  renderKeranjang();
+
+  alert("Transaksi selesai!");
 }
 </script>
 
