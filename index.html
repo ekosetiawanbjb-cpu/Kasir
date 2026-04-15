@@ -373,14 +373,121 @@ function hitungKembalian(){
  kembalian.textContent = kembali>=0 ? kembali : 0;
 }
 
+// 🔥 GLOBAL (taruh di atas script)
+let nomorTransaksi = Number(localStorage.getItem("trx") || 1);
+
+// 🔥 HELPER
+function wrapText(text, max){
+  let lines = [];
+  while(text.length > max){
+    lines.push(text.substring(0, max));
+    text = text.substring(max);
+  }
+  lines.push(text);
+  return lines;
+}
+
+function padRight(text, length){
+  return text + " ".repeat(Math.max(0, length - text.length));
+}
+
+function padLeft(text, length){
+  return " ".repeat(Math.max(0, length - text.length)) + text;
+}
+
+// 🔥 STRUK PREMIUM FINAL
 function generateStruk(){
- let s='KIOS 88\n================\n';
- keranjangData.forEach(i=>{
-  s+=i.nama+' x'+i.qty+' = '+i.total+'\n';
- });
- s+='TOTAL: '+total.textContent+'\n';
- s+='Terima kasih 🙏\n';
- return s;
+
+  const width = 32;
+
+  const totalBelanja = Number(total.textContent || 0);
+  const bayarUang = Number(bayar.value || 0);
+  const kembali = bayarUang - totalBelanja;
+
+  const now = new Date();
+  const tanggal = now.toLocaleDateString('id-ID');
+  const jam = now.toLocaleTimeString('id-ID');
+
+  const trx = "TRX" + String(nomorTransaksi).padStart(4, '0');
+
+  let s = "";
+
+  // HEADER
+  s += padLeft("KIOS 88", (width + "KIOS 88".length)/2) + "\n";
+  s += "-".repeat(width) + "\n";
+
+  s += "No  : " + trx + "\n";
+  s += "Tgl : " + tanggal + "\n";
+  s += "Jam : " + jam + "\n";
+  s += "-".repeat(width) + "\n";
+
+  // PRODUK
+  keranjangData.forEach(item => {
+
+    let namaLines = wrapText(item.nama, width);
+
+    namaLines.forEach(line => {
+      s += line + "\n";
+    });
+
+    let kiri = item.qty + " x " + item.harga.toLocaleString('id-ID');
+    let kanan = item.total.toLocaleString('id-ID');
+
+    s += padRight(kiri, width - kanan.length) + kanan + "\n";
+  });
+
+  s += "-".repeat(width) + "\n";
+
+  // TOTAL
+  s += padRight("Total", width - totalBelanja.toLocaleString('id-ID').length) 
+       + totalBelanja.toLocaleString('id-ID') + "\n";
+
+  s += padRight("Bayar", width - bayarUang.toLocaleString('id-ID').length) 
+       + bayarUang.toLocaleString('id-ID') + "\n";
+
+  let kembaliFix = kembali >= 0 ? kembali : 0;
+
+  s += padRight("Kembali", width - kembaliFix.toLocaleString('id-ID').length) 
+       + kembaliFix.toLocaleString('id-ID') + "\n";
+
+  s += "-".repeat(width) + "\n";
+
+  // FOOTER
+  s += padLeft("Terima Kasih", (width + "Terima Kasih".length)/2) + "\n";
+  s += padLeft("KIOS 88", (width + "KIOS 88".length)/2) + "\n\n\n";
+
+  return s;
+}
+
+// 🔥 UPDATE DI FUNCTION selesai()
+function selesai(){
+
+  for(const item of keranjangData){
+    const p=dataProduk.find(x=>x.id===item.id);
+    if(p.stok < item.qty){
+      alert("Stok tidak cukup!");
+      return;
+    }
+  }
+
+  keranjangData.forEach(item=>{
+    const p=dataProduk.find(x=>x.id===item.id);
+    db.collection('produk').doc(p.id).update({
+      stok:p.stok-item.qty
+    });
+  });
+
+  // 🔥 PRINT AUTO (kalau mau aktifin nanti)
+  // cetakRawBT();
+
+  // 🔥 UPDATE NOMOR TRANSAKSI
+  nomorTransaksi++;
+  localStorage.setItem("trx", nomorTransaksi);
+
+  keranjangData=[];
+  renderKeranjang();
+
+  alert("Transaksi selesai!");
 }
 
 window.cetakRawBT = function(){
