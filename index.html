@@ -111,6 +111,7 @@ button{
 
 <button class="btn-primary" onclick="cetakRawBT()">Print Bluetooth</button>
 <button class="btn-primary" onclick="selesai()">Selesai</button>
+<button onclick="laporanHarianExcel()">📊 Export Excel</button>
 </div>
 
 </div>
@@ -430,8 +431,8 @@ function generateStruk(){
       s += line + "\n";
     });
 
-    let kiri = item.qty + " x " + item.harga.toLocaleString('id-ID');
-    let kanan = item.total.toLocaleString('id-ID');
+    let kiri = item.qty + " x Rp " + item.harga.toLocaleString('id-ID');
+    let kanan = " Rp " + item.total.toLocaleString('id-ID');
 
     s += padRight(kiri, width - kanan.length) + kanan + "\n";
   });
@@ -473,30 +474,153 @@ window.cetakRawBT = function(){
 }
 
 // 🔥 UPDATE DI FUNCTION selesai()
-function selesai(){
+async function selesai(){
 
-  for(const item of keranjangData){
-    const p=dataProduk.find(x=>x.id===item.id);
-    if(p.stok < item.qty){
-      alert("Stok tidak cukup!");
-      return;
+  if(window.loadingSelesai) return;
+  window.loadingSelesai = true;
+
+  try{
+
+    // 1. CEK STOK
+    for(const item of keranjangData){
+      const p = dataProduk.find(x=>x.id===item.id);
+
+      if(!p || p.stok < item.qty){
+        alert("Stok tidak cukup!");
+        window.loadingSelesai = false;
+        return;
+      }
     }
+
+    // 2. SIMPAN TRANSAKSI
+    await db.collection('transaksi').add({
+      tanggal: new Date(),
+      items: keranjangData.map(i=>{
+  const p = dataProduk.find(x=>x.id===i.id);
+  return {
+    ...i,
+    harga_modal: p?.harga_modal || 0
+  }
+}),
+      total: Number(total.textContent || 0),
+      bayar: Number(bayar.value || 0),
+      kembali: Number(kembalian.textContent || 0)
+    });
+
+    // 3. UPDATE STOK
+    for(const item of keranjangData){
+      const p = dataProduk.find(x=>x.id===item.id);
+      if(!p) continue;
+
+      await db.collection('produk').doc(p.id).update({
+        stok: p.stok - item.qty
+      });
+    }
+
+    // 4. RESET
+    nomorTransaksi++;
+    localStorage.setItem("trx", nomorTransaksi);
+
+    keranjangData = [];
+    renderKeranjang();
+
+    alert("Transaksi selesai!");
+
+  }catch(err){
+    console.error(err);
+    alert("Terjadi error, cek koneksi!");
   }
 
- keranjangData.forEach(item=>{
-  const p=dataProduk.find(x=>x.id===item.id);
-  db.collection('produk').doc(p.id).update({
-    stok:p.stok-item.qty
+  window.loadingSelesai = false;
+}
+
+ async function laporanHarianExcel(){
+   
+  let start = new Date();
+  start.setHours(0,0,0,0);
+
+  let end = new Date();
+  end.setHours(23,59,59,999);
+
+  const snap = await db.collection('transaksi')
+    .where('tanggal','>=',start)
+    .where('tanggal','<=',end)
+    .get();
+
+   if(snap.empty){
+    alert("Belum ada transaksi hari ini");
+    return;
+  }
+
+  let dataExcel = [];
+  let totalOmzet = 0;
+  let totalModal = 0;
+
+  snap.forEach(docSnap=>{
+    const trx = docSnap.data();
+
+    trx.items.forEach(i=>{
+      
+      let modal = (i.harga_modal || 0) * i.qty;
+      let jual = i.total;
+
+      totalOmzet += jual;
+      totalModal += modal;
+
+      dataExcel.push({
+        tanggal: trx.tanggal.toDate().toLocaleString('id-ID'),
+        nama: i.nama,
+        qty: i.qty,
+        harga_jual: i.harga,
+        total_jual: jual,
+        total_modal: modal,
+        keuntungan: jual - modal
+      });
+    });
   });
- });
 
-  nomorTransaksi++;
-  localStorage.setItem("trx", nomorTransaksi);
+// 🔥 HEADER EXCEL (TARUH DI SINI)
+dataExcel.unshift({
+  tanggal:"Tanggal",
+  nama:"Produk",
+  qty:"Qty",
+  harga_jual:"Harga Jual",
+  total_jual:"Total Jual",
+  total_modal:"Modal",
+  keuntungan:"Profit"
+});
+  
+  // 🔥 TAMBAH SUMMARY DI BAWAH
+  dataExcel.push({});
+  dataExcel.push({
+    nama: "TOTAL OMZET",
+    total_jual: totalOmzet
+  });
+  dataExcel.push({
+    nama: "TOTAL MODAL",
+    total_modal: totalModal
+  });
+  dataExcel.push({
+    nama: "PROFIT",
+    keuntungan: totalOmzet - totalModal
+  });
 
-  keranjangData=[];
-  renderKeranjang();
+  // 🔥 BUAT FILE EXCEL
+  const ws = XLSX.utils.json_to_sheet(dataExcel);
+  ws['!cols'] = [
+  { wch: 20 },
+  { wch: 25 },
+  { wch: 5 },
+  { wch: 15 },
+  { wch: 15 },
+  { wch: 15 },
+  { wch: 15 }
+];
+  const wb = XLSX.utils.book_new();
 
-  alert("Transaksi selesai!");
+  XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+
+  XLSX.writeFile(wb, "laporan_harian.xlsx");
 }
 </script>
 
