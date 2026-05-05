@@ -606,16 +606,9 @@ dataExcel.unshift({
   });
 
   // 🔥 BUAT FILE EXCEL
-  const ws = XLSX.utils.json_to_sheet(dataExcel);
-  ws['!cols'] = [
-  { wch: 20 },
-  { wch: 25 },
-  { wch: 5 },
-  { wch: 15 },
-  { wch: 15 },
-  { wch: 15 },
-  { wch: 15 }
-];
+  const ws = XLSX.utils.json_to_sheet(dataExcel, {
+  skipHeader: true
+});
   const wb = XLSX.utils.book_new();
 
   XLSX.utils.book_append_sheet(wb, ws, "Laporan");
