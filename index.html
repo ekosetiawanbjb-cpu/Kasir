@@ -101,6 +101,23 @@ button{
 </div>
 
 <div class="card">
+
+<h3>TOP UP</h3>
+
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+
+<select id="topupMode">
+  <option value="biasa">BIASA</option>
+  <option value="kurir">KURIR</option>
+</select>
+
+<input id="topupNominal" type="number" placeholder="Total TOP UP">
+
+<button class="btn-warning" onclick="tambahTopup()">
+Tambah TOP UP
+</button>
+
+</div>
 <div id="keranjang"></div>
 <p>Total: Rp <span id="total">0</span></p>
 
@@ -141,6 +158,41 @@ const db=firebase.firestore();
 
 let dataProduk=[], keranjangData=[], kategoriAktif=null, editId=null;
 
+function hitungAdminTopup(nominal, mode){
+
+ nominal = Number(nominal || 0);
+
+ // =========================
+ // MODE BIASA
+ // =========================
+ if(mode === 'biasa'){
+
+  if(nominal <= 10000) return 1000;
+  if(nominal <= 200000) return 2000;
+  if(nominal <= 500000) return 3000;
+  if(nominal <= 3000000) return 5000;
+
+  // di atas 3jt naik tiap 1jt
+  return 5000 + Math.ceil((nominal - 3000000) / 1000000) * 1000;
+ }
+
+ // =========================
+ // MODE KURIR
+ // =========================
+ if(mode === 'kurir'){
+
+  if(nominal <= 10000) return 1000;
+  if(nominal <= 500000) return 2000;
+  if(nominal <= 3000000) return 3000;
+  if(nominal <= 5000000) return 5000;
+
+  // di atas 5jt naik tiap 1jt
+  return 5000 + Math.ceil((nominal - 5000000) / 1000000) * 1000;
+ }
+
+ return 0;
+}
+ 
 function toggleForm(){
  formArea.style.display =
  formArea.style.display==='none'?'block':'none';
@@ -322,6 +374,39 @@ function simpanEdit(){
  modalEdit.style.display='none';
 }
 
+function tambahTopup(){
+
+ const nominal = Number(topupNominal.value || 0);
+ const mode = topupMode.value;
+
+ if(nominal <= 0){
+  alert('Masukkan nominal TOP UP');
+  return;
+ }
+
+ const admin = hitungAdminTopup(nominal, mode);
+ const total = nominal + admin;
+
+ keranjangData.push({
+  id:'TOPUP-' + Date.now(),
+  nama:'TOP UP ' + mode.toUpperCase() + ' Rp ' + nominal.toLocaleString('id-ID'),
+  harga:total,
+  qty:1,
+  total:total,
+
+  // khusus laporan
+  is_topup:true,
+  topup_mode:mode,
+  nominal_topup:nominal,
+  admin_topup:admin,
+  harga_modal:nominal
+ });
+
+ topupNominal.value='';
+
+ renderKeranjang();
+}
+ 
 function addKeranjang(p){
  const ex=keranjangData.find(x=>x.id===p.id);
 
@@ -350,10 +435,12 @@ function renderKeranjang(){
  keranjang.innerHTML='';
 
  keranjangData.forEach((i,idx)=>{
-  keranjang.innerHTML+=`
-    ${i.nama} x${i.qty} = Rp ${i.total}
-    <button onclick="hapusItem(${idx})">X</button><br>
-  `;
+ keranjang.innerHTML+=`
+  ${i.nama}
+  ${i.is_topup ? '(Admin: Rp ' + i.admin_topup.toLocaleString('id-ID') + ')' : ''}
+  x${i.qty} = Rp ${i.total.toLocaleString('id-ID')}
+  <button onclick="hapusItem(${idx})">X</button><br>
+`;
   t+=i.total;
  });
 
@@ -483,20 +570,31 @@ async function selesai(){
 
     // 1. CEK STOK
     for(const item of keranjangData){
-      const p = dataProduk.find(x=>x.id===item.id);
 
-      if(!p || p.stok < item.qty){
-        alert("Stok tidak cukup!");
-        window.loadingSelesai = false;
-        return;
-      }
-    }
+  // skip topup
+  if(item.is_topup) continue;
+
+  const p = dataProduk.find(x=>x.id===item.id);
+
+  if(!p || p.stok < item.qty){
+    alert("Stok tidak cukup!");
+    window.loadingSelesai = false;
+    return;
+  }
+}
 
     // 2. SIMPAN TRANSAKSI
     await db.collection('transaksi').add({
       tanggal: new Date(),
-      items: keranjangData.map(i=>{
+     items: keranjangData.map(i=>{
+
+  // kalau TOPUP
+  if(i.is_topup){
+    return i;
+  }
+
   const p = dataProduk.find(x=>x.id===i.id);
+
   return {
     ...i,
     harga_modal: p?.harga_modal || 0
@@ -561,20 +659,34 @@ async function selesai(){
 
     trx.items.forEach(i=>{
       
-      let modal = (i.harga_modal || 0) * i.qty;
-      let jual = i.total;
+     let modal = 0;
+let jual = i.total;
+let profit = 0;
+
+if(i.is_topup){
+
+ modal = i.nominal_topup;
+ profit = i.admin_topup;
+
+}else{
+
+ modal = (i.harga_modal || 0) * i.qty;
+ profit = jual - modal;
+}
 
       totalOmzet += jual;
       totalModal += modal;
+      let jenis = i.is_topup ? 'TOP UP' : 'PRODUK';
 
       dataExcel.push({
-        tanggal: trx.tanggal.toDate().toLocaleString('id-ID'),
-        nama: i.nama,
-        qty: i.qty,
-        harga_jual: i.harga,
-        total_jual: jual,
-        total_modal: modal,
-        keuntungan: jual - modal
+  tanggal: trx.tanggal.toDate().toLocaleString('id-ID'),
+  jenis: jenis,
+  nama: i.nama,
+  qty: i.qty,
+  harga_jual: i.harga,
+  total_jual: jual,
+  total_modal: modal,
+  keuntungan: profit
       });
     });
   });
@@ -582,6 +694,7 @@ async function selesai(){
 // 🔥 HEADER EXCEL (TARUH DI SINI)
 dataExcel.unshift({
   tanggal:"Tanggal",
+  jenis:"Jenis",
   nama:"Produk",
   qty:"Qty",
   harga_jual:"Harga Jual",
