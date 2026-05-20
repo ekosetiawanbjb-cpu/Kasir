@@ -111,7 +111,7 @@ button{
   <option value="kurir">KURIR</option>
 </select>
 
-<input id="topupNominal" type="number" placeholder="Total TOP UP">
+<input id="topupNominal" type="text" placeholder="Total TOP UP" oninput="formatRupiah(this)">
 
 <button class="btn-warning" onclick="tambahTopup()">
 Tambah TOP UP
@@ -121,7 +121,7 @@ Tambah TOP UP
 <div id="keranjang"></div>
 <p>Total: Rp <span id="total">0</span></p>
 
-<input id="bayar" placeholder="Bayar">
+<input id="bayar" placeholder="Bayar" oninput="formatRupiah(this)">
 <button onclick="hitungKembalian()">Hitung</button>
 
 <p>Kembalian: Rp <span id="kembalian">0</span></p>
@@ -157,7 +157,12 @@ firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
 let dataProduk=[], keranjangData=[], kategoriAktif=null, editId=null;
-
+ 
+function formatRupiah(input){
+  let angka = input.value.replace(/\D/g,'');
+  input.value = Number(angka).toLocaleString('id-ID');
+}
+ 
 function hitungAdminTopup(nominal, mode){
 
  nominal = Number(nominal || 0);
@@ -376,7 +381,9 @@ function simpanEdit(){
 
 function tambahTopup(){
 
- const nominal = Number(topupNominal.value || 0);
+ const nominal = Number(
+  topupNominal.value.replace(/\./g,'') || 0
+);
  const mode = topupMode.value;
 
  if(nominal <= 0){
@@ -454,7 +461,9 @@ function hapusItem(i){
 
 function hitungKembalian(){
  const totalBelanja=Number(total.textContent||0);
- const uang=Number(bayar.value||0);
+ const uang = Number(
+  bayar.value.replace(/\./g,'') || 0
+);
  const kembali=uang-totalBelanja;
  kembalian.textContent = kembali>=0 ? kembali : 0;
 }
@@ -487,7 +496,13 @@ function generateStruk(){
   const width = 32;
 
   const totalBelanja = Number(total.textContent || 0);
-  const bayarUang = Number(bayar.value || 0);
+
+const uang = Number(
+  bayar.value.replace(/\./g,'') || 0
+);
+  const bayarUang = Number(
+  bayar.value.replace(/\./g,'') || 0
+);
   const kembali = bayarUang - totalBelanja;
 
   const now = new Date();
@@ -550,7 +565,8 @@ function generateStruk(){
 
 window.cetakRawBT = function(){
   const text = generateStruk(); // 🔥 INI KUNCINYA
-  if(navigator.share){
+ if(!text) return; 
+ if(navigator.share){
     navigator.share({
       text: text
     });
@@ -562,9 +578,24 @@ window.cetakRawBT = function(){
 
 // 🔥 UPDATE DI FUNCTION selesai()
 async function selesai(){
+ 
+if(keranjangData.length <= 0){
+  alert("Keranjang kosong!");
+  return;
+}
+const totalBelanja = Number(total.textContent || 0);
 
-  if(window.loadingSelesai) return;
-  window.loadingSelesai = true;
+const uang = Number(
+  bayar.value.replace(/\./g,'') || 0
+);
+
+if(uang < totalBelanja){
+  alert("Uang pembayaran kurang!");
+  return;
+}
+
+if(window.loadingSelesai) return;
+window.loadingSelesai = true;
 
   try{
 
@@ -601,7 +632,9 @@ async function selesai(){
   }
 }),
       total: Number(total.textContent || 0),
-      bayar: Number(bayar.value || 0),
+      bayar: Number(
+  bayar.value.replace(/\./g,'') || 0
+),
       kembali: Number(kembalian.textContent || 0)
     });
 
